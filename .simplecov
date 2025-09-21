@@ -1,0 +1,66 @@
+# SimpleCov configuration for jdpi-client
+SimpleCov.configure do
+  # Only run coverage for Ruby 3.0+
+  if RUBY_VERSION >= "3.0.0"
+    # Coverage output directory
+    coverage_dir "coverage"
+
+    # Files to exclude from coverage
+    add_filter do |source_file|
+      # Exclude test files
+      source_file.filename.include?("/test/") ||
+      # Exclude vendor and bundle directories
+      source_file.filename.include?("/vendor/") ||
+      source_file.filename.include?("/.bundle/") ||
+      # Exclude generated files
+      source_file.filename.include?("/tmp/") ||
+      # Exclude version file (simple constant)
+      source_file.filename.end_with?("/version.rb")
+    end
+
+    # Group files by functionality
+    add_group "Configuration", ["lib/jdpi_client/config.rb"]
+    add_group "HTTP Client", ["lib/jdpi_client/http.rb"]
+    add_group "Error Handling", ["lib/jdpi_client/errors.rb"]
+    add_group "Authentication", ["lib/jdpi_client/auth"]
+    add_group "SPI Services", ["lib/jdpi_client/spi"]
+    add_group "DICT Services", ["lib/jdpi_client/dict"]
+    add_group "QR Services", ["lib/jdpi_client/qr"]
+    add_group "Core", ["lib/jdpi_client.rb"]
+
+    # Set coverage thresholds
+    minimum_coverage 85
+    minimum_coverage_by_file 70
+    refuse_coverage_drop
+
+    # Configure output formats
+    if ENV["CI"] == "true"
+      # CI environment - use simple formatter
+      formatter SimpleCov::Formatter::SimpleFormatter
+    else
+      # Local development - use HTML formatter for detailed view
+      formatter SimpleCov::Formatter::MultiFormatter.new([
+        SimpleCov::Formatter::HTMLFormatter,
+        SimpleCov::Formatter::SimpleFormatter
+      ])
+    end
+
+    # Track all Ruby files in lib directory
+    track_files "lib/**/*.rb"
+
+    # Enable branch coverage for Ruby 2.5+
+    enable_coverage :branch if RUBY_VERSION >= "2.5.0"
+
+    # Merge results from multiple test runs
+    merge_timeout 3600
+
+    # Project name for reports
+    project_name "JDPI Client"
+
+    puts "📊 SimpleCov configured for Ruby #{RUBY_VERSION}"
+    puts "   Coverage threshold: #{minimum_coverage}%"
+    puts "   Output directory: #{coverage_dir}"
+  else
+    puts "⚠️  Coverage tracking requires Ruby 3.0+, current: #{RUBY_VERSION}"
+  end
+end

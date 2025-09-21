@@ -193,15 +193,32 @@ bundle exec rubocop
 bundle exec rake
 ```
 
-### Code Quality
+### Code Quality & Coverage
 
 ```bash
 # Auto-fix linting issues
 bundle exec rubocop -a
 
-# Check test coverage
+# Run tests with coverage (Ruby 3.0+)
+bundle exec rake test_coverage
+
+# Generate coverage report only
+bundle exec rake coverage
+
+# Full CI suite (tests + coverage + linting)
+bundle exec rake ci
+
+# Alternative coverage command
 COVERAGE=true bundle exec rake test
 ```
+
+#### Coverage Requirements
+
+- **Ruby 3.0+** required for coverage tracking
+- Minimum coverage threshold: **85%**
+- Per-file minimum: **70%**
+- HTML reports generated in `coverage/index.html`
+- Branch coverage enabled for detailed analysis
 
 ### Building the Gem
 
