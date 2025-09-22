@@ -21,6 +21,16 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby-version }}
         bundler-cache: true
+        cache-version: 1
+      env:
+        BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+
+    - name: Install dependencies
+      run: |
+        gem update --system
+        bundle config set --local deployment false
+        bundle config set --local path vendor/bundle
+        bundle install --jobs 4 --retry 3
 
     - name: Run linter
       run: bundle exec rubocop
@@ -30,6 +40,7 @@ jobs:
       env:
         COVERAGE: true
         CI: true
+        RAILS_ENV: test
 
     - name: Upload coverage reports
       if: matrix.ruby-version == '3.2'
@@ -69,6 +80,12 @@ jobs:
       with:
         ruby-version: '3.2'
         bundler-cache: true
+        cache-version: 1
+
+    - name: Install dependencies
+      run: |
+        gem update --system
+        bundle install --jobs 4 --retry 3
 
     - name: Build gem
       run: gem build jdpi_client.gemspec
