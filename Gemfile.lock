@@ -2,6 +2,7 @@ PATH
   remote: .
   specs:
     jdpi_client (0.1.0)
+      base64 (>= 0.1.0)
       faraday (>= 2.9, < 3.0)
       faraday-retry (>= 2.2, < 3.0)
       multi_json (>= 1.15, < 2.0)
@@ -10,6 +11,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
+    base64 (0.3.0)
     docile (1.4.1)
     faraday (2.13.4)
       faraday-net_http (>= 2.0, < 3.5)

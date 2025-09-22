@@ -12,13 +12,19 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.required_ruby_version = ">= 3.0.0"
 
+  # Core dependencies
   spec.add_dependency "faraday", ">= 2.9", "< 3.0"
   spec.add_dependency "faraday-retry", ">= 2.2", "< 3.0"
   spec.add_dependency "multi_json", ">= 1.15", "< 2.0"
+  spec.add_dependency "base64", ">= 0.1.0"
 
+  # Development dependencies
   spec.add_development_dependency "minitest", ">= 5.0"
   spec.add_development_dependency "rake", ">= 13.0"
   spec.add_development_dependency "rubocop", ">= 1.0"
   spec.add_development_dependency "simplecov", ">= 0.22"
+
+  # Optional dependencies for token storage backends
+  # Note: These are optional and only required when using specific storage adapters
   spec.metadata["rubygems_mfa_required"] = "true"
 end
