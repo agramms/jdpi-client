@@ -1,27 +1,29 @@
-require 'test_helper'
+# frozen_string_literal: true
+
+require "test_helper"
 
 class TestCrossStorageValidation < Minitest::Test
   include ServiceConfiguration
 
   def setup
     @base_config = create_test_config(:memory)
-    @test_client_id = 'cross_storage_test_client'
-    @test_scopes = ['auth_apim', 'dict_api', 'spi_api']
+    @test_client_id = "cross_storage_test_client"
+    @test_scopes = %w[auth_apim dict_api spi_api]
 
     # Common test token data
     @test_token = {
-      'access_token' => 'cross_storage_test_token_12345',
-      'token_type' => 'Bearer',
-      'expires_in' => 3600,
-      'scope' => @test_scopes.join(' '),
-      'created_at' => Time.now.utc.iso8601
+      "access_token" => "cross_storage_test_token_12345",
+      "token_type" => "Bearer",
+      "expires_in" => 3600,
+      "scope" => @test_scopes.join(" "),
+      "created_at" => Time.now.utc.iso8601
     }
 
     @sensitive_token = {
-      'access_token' => 'very_secret_cross_storage_token',
-      'refresh_token' => 'very_secret_refresh_token',
-      'scope' => 'admin:all sensitive:data',
-      'user_id' => 'sensitive_user_123'
+      "access_token" => "very_secret_cross_storage_token",
+      "refresh_token" => "very_secret_refresh_token",
+      "scope" => "admin:all sensitive:data",
+      "user_id" => "sensitive_user_123"
     }
 
     # Set up different storage configurations
@@ -31,21 +33,19 @@ class TestCrossStorageValidation < Minitest::Test
   def teardown
     # Clean up all storage backends
     [@memory_storage, @database_storage].compact.each do |storage|
-      begin
-        storage.clear_all if storage.respond_to?(:clear_all)
-      rescue
-        # Ignore cleanup errors
-      end
+      storage.clear_all if storage.respond_to?(:clear_all)
+    rescue StandardError
+      # Ignore cleanup errors
     end
   end
 
   # Test cache key consistency across all storage types
   def test_cache_key_consistency_across_storages
     scope_combinations = [
-      ['auth_apim'],
-      ['auth_apim', 'dict_api'],
-      ['auth_apim', 'spi_api', 'qrcode_api'],
-      ['auth_apim', 'dict_api', 'spi_api', 'qrcode_api']
+      ["auth_apim"],
+      %w[auth_apim dict_api],
+      %w[auth_apim spi_api qrcode_api],
+      %w[auth_apim dict_api spi_api qrcode_api]
     ]
 
     scope_combinations.each do |scopes|
@@ -72,14 +72,14 @@ class TestCrossStorageValidation < Minitest::Test
   # Test scope fingerprint uniqueness and consistency
   def test_scope_fingerprint_uniqueness
     scope_sets = [
-      ['auth_apim'],
-      ['auth_apim', 'dict_api'],
-      ['auth_apim', 'spi_api'],
-      ['auth_apim', 'qrcode_api'],
-      ['auth_apim', 'dict_api', 'spi_api'],
-      ['auth_apim', 'dict_api', 'qrcode_api'],
-      ['auth_apim', 'spi_api', 'qrcode_api'],
-      ['auth_apim', 'dict_api', 'spi_api', 'qrcode_api']
+      ["auth_apim"],
+      %w[auth_apim dict_api],
+      %w[auth_apim spi_api],
+      %w[auth_apim qrcode_api],
+      %w[auth_apim dict_api spi_api],
+      %w[auth_apim dict_api qrcode_api],
+      %w[auth_apim spi_api qrcode_api],
+      %w[auth_apim dict_api spi_api qrcode_api]
     ]
 
     fingerprints = {}
@@ -147,21 +147,21 @@ class TestCrossStorageValidation < Minitest::Test
   # Test data serialization consistency
   def test_data_serialization_consistency
     complex_token = {
-      'access_token' => 'complex_test_token',
-      'metadata' => {
-        'created_by' => 'test_suite',
-        'features' => ['feature1', 'feature2'],
-        'config' => {
-          'timeout' => 300,
-          'retries' => 3,
-          'encrypted' => true
+      "access_token" => "complex_test_token",
+      "metadata" => {
+        "created_by" => "test_suite",
+        "features" => %w[feature1 feature2],
+        "config" => {
+          "timeout" => 300,
+          "retries" => 3,
+          "encrypted" => true
         }
       },
-      'timestamps' => {
-        'created_at' => Time.now.utc.iso8601,
-        'expires_at' => (Time.now + 3600).utc.iso8601
+      "timestamps" => {
+        "created_at" => Time.now.utc.iso8601,
+        "expires_at" => (Time.now + 3600).utc.iso8601
       },
-      'scope' => @test_scopes.join(' ')
+      "scope" => @test_scopes.join(" ")
     }
 
     storage_backends = {
@@ -173,6 +173,7 @@ class TestCrossStorageValidation < Minitest::Test
 
     storage_backends.each do |backend_name, storage|
       next unless storage # Skip if storage is not available
+
       # Store complex token
       result = storage.store(test_key, complex_token, 3600)
       assert result, "Failed to store complex token in #{backend_name}"
@@ -182,8 +183,8 @@ class TestCrossStorageValidation < Minitest::Test
       assert_equal complex_token, retrieved, "Serialization mismatch in #{backend_name}"
 
       # Verify nested structures
-      assert_equal complex_token['metadata']['features'], retrieved['metadata']['features']
-      assert_equal complex_token['metadata']['config']['timeout'], retrieved['metadata']['config']['timeout']
+      assert_equal complex_token["metadata"]["features"], retrieved["metadata"]["features"]
+      assert_equal complex_token["metadata"]["config"]["timeout"], retrieved["metadata"]["config"]["timeout"]
 
       # Clean up
       storage.delete(test_key)
@@ -232,26 +233,26 @@ class TestCrossStorageValidation < Minitest::Test
   def test_scope_compatibility_checking
     test_cases = [
       {
-        token_scopes: ['auth_apim', 'dict_api', 'spi_api'],
-        requested_scopes: ['auth_apim', 'dict_api'],
+        token_scopes: %w[auth_apim dict_api spi_api],
+        requested_scopes: %w[auth_apim dict_api],
         compatible: true,
         description: "subset scopes should be compatible"
       },
       {
-        token_scopes: ['auth_apim', 'dict_api'],
-        requested_scopes: ['auth_apim', 'dict_api', 'spi_api'],
+        token_scopes: %w[auth_apim dict_api],
+        requested_scopes: %w[auth_apim dict_api spi_api],
         compatible: false,
         description: "superset scopes should not be compatible"
       },
       {
-        token_scopes: ['auth_apim', 'dict_api'],
-        requested_scopes: ['auth_apim', 'dict_api'],
+        token_scopes: %w[auth_apim dict_api],
+        requested_scopes: %w[auth_apim dict_api],
         compatible: true,
         description: "identical scopes should be compatible"
       },
       {
-        token_scopes: ['auth_apim', 'spi_api'],
-        requested_scopes: ['auth_apim', 'dict_api'],
+        token_scopes: %w[auth_apim spi_api],
+        requested_scopes: %w[auth_apim dict_api],
         compatible: false,
         description: "different scopes should not be compatible"
       }
@@ -358,15 +359,15 @@ class TestCrossStorageValidation < Minitest::Test
     storage = @memory_storage
 
     # Store tokens with different prefixed keys
-    storage.store(key1, @test_token.merge('prefix' => 'one'), 3600)
-    storage.store(key2, @test_token.merge('prefix' => 'two'), 3600)
+    storage.store(key1, @test_token.merge("prefix" => "one"), 3600)
+    storage.store(key2, @test_token.merge("prefix" => "two"), 3600)
 
     # Verify isolation
     token1 = storage.retrieve(key1)
     token2 = storage.retrieve(key2)
 
-    assert_equal 'one', token1['prefix']
-    assert_equal 'two', token2['prefix']
+    assert_equal "one", token1["prefix"]
+    assert_equal "two", token2["prefix"]
 
     debug_log("✅ Cache key prefix isolation verified")
   end
@@ -379,14 +380,14 @@ class TestCrossStorageValidation < Minitest::Test
 
     # Database storage (SQLite)
     begin
-      database_config = create_database_config('sqlite3:///:memory:')
+      database_config = create_database_config("sqlite3:///:memory:")
       @database_storage = JDPIClient::TokenStorage::Database.new(database_config)
-    rescue => error
+    rescue StandardError => e
       @database_storage = nil
-      debug_log("⚠️  Database storage not available: #{error.message}")
+      debug_log("⚠️  Database storage not available: #{e.message}")
     end
 
-    # Note: Redis and DynamoDB would require more complex mocking setup
+    # NOTE: Redis and DynamoDB would require more complex mocking setup
     # for cross-storage tests, so we focus on Memory and Database here
   end
 end

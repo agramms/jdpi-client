@@ -119,7 +119,7 @@ class TestTokenEncryption < Minitest::Test
   def test_generate_key_creates_valid_key
     key = JDPIClient::TokenStorage::Encryption.generate_key
     assert_equal 44, key.length # 32 bytes as base64 = 44 characters
-    assert key.match?(/\A[A-Za-z0-9+\/]+=*\z/) # Valid base64 format
+    assert key.match?(%r{\A[A-Za-z0-9+/]+=*\z}) # Valid base64 format
   end
 
   def test_generate_key_creates_unique_keys
@@ -137,7 +137,7 @@ class TestTokenEncryption < Minitest::Test
       "metadata" => {
         "environment" => "production",
         "version" => "1.0.0",
-        "features" => ["encryption", "clustering"]
+        "features" => %w[encryption clustering]
       }
     }
 

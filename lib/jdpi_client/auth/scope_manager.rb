@@ -42,7 +42,15 @@ module JDPIClient
                         end
 
           # Remove duplicates, sort for consistency
-          scope_array.uniq.sort.join(" ")
+          result = scope_array.uniq.sort.join(" ")
+
+          # Only default to auth_apim if input was nil
+          # Empty arrays, empty strings, or whitespace-only strings return empty string
+          if result.empty?
+            scopes.nil? ? "auth_apim" : ""
+          else
+            result
+          end
         end
 
         # Generate a cache key for the given client_id and scopes
@@ -71,16 +79,16 @@ module JDPIClient
         def scopes_allowed?(scopes, allowed_scopes = nil)
           return true if allowed_scopes.nil? # No restrictions
 
-          normalized_scopes = normalize_scopes(scopes).split(" ")
+          normalized_scopes = normalize_scopes(scopes).split
 
           # Normalize allowed_scopes to an array
           allowed_array = if allowed_scopes.is_a?(String)
-                           allowed_scopes.split(" ")
-                         elsif allowed_scopes.respond_to?(:to_a)
-                           allowed_scopes.to_a
-                         else
-                           Array(allowed_scopes)
-                         end
+                            allowed_scopes.split
+                          elsif allowed_scopes.respond_to?(:to_a)
+                            allowed_scopes.to_a
+                          else
+                            Array(allowed_scopes)
+                          end
 
           allowed_set = Set.new(allowed_array)
 
@@ -91,7 +99,7 @@ module JDPIClient
         # @param service_type [Symbol] Service type (:dict, :spi, :qr, etc.)
         # @param operation [Symbol] Operation type (ignored - JDPI uses service-level scopes)
         # @return [Array<String>] Default scopes for the service
-        def default_scopes_for(service_type, operation = nil)
+        def default_scopes_for(service_type, _operation = nil)
           base_scopes = ["auth_apim"]
 
           case service_type
@@ -118,8 +126,8 @@ module JDPIClient
         # @param requested_scopes [String] Scopes being requested
         # @return [Boolean] True if token can be reused
         def scopes_compatible?(token_scopes, requested_scopes)
-          token_set = Set.new(normalize_scopes(token_scopes).split(" "))
-          requested_set = Set.new(normalize_scopes(requested_scopes).split(" "))
+          token_set = Set.new(normalize_scopes(token_scopes).split)
+          requested_set = Set.new(normalize_scopes(requested_scopes).split)
 
           # Token can be reused if it has all requested scopes
           requested_set.subset?(token_set)
@@ -129,8 +137,12 @@ module JDPIClient
         # @param oauth_response [Hash] OAuth token response
         # @return [String] Normalized scopes from response
         def parse_scopes_from_response(oauth_response)
+          return normalize_scopes("auth_apim") unless oauth_response
+
           scope_value = oauth_response["scope"] || oauth_response[:scope]
-          normalize_scopes(scope_value || "auth_apim")
+          # For OAuth responses, empty/nil scope should default to auth_apim
+          normalized = normalize_scopes(scope_value || "auth_apim")
+          normalized.empty? ? "auth_apim" : normalized
         end
 
         # Generate scope parameter for OAuth request
@@ -144,7 +156,7 @@ module JDPIClient
         # @param scopes [String, Array<String>] Scopes to describe
         # @return [Hash] Description of scope capabilities
         def describe_scopes(scopes)
-          normalized = normalize_scopes(scopes).split(" ")
+          normalized = normalize_scopes(scopes).split
           capabilities = {
             auth_apim: false,
             dict_api: false,
@@ -188,7 +200,7 @@ module JDPIClient
         # @param scopes [String, Array<String>] Scopes to validate
         # @return [Array<String>] Invalid scopes found
         def invalid_scopes(scopes)
-          normalized = normalize_scopes(scopes).split(" ")
+          normalized = normalize_scopes(scopes).split
           normalized.reject { |scope| valid_scope_format?(scope) }
         end
       end

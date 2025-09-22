@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class TestHTTPRequestPaths < Minitest::Test
   def setup
-    super  # Important: Call parent setup for WebMock stubs
+    super # Important: Call parent setup for WebMock stubs
 
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
@@ -144,9 +144,11 @@ class TestHTTPRequestPaths < Minitest::Test
     storage = auth_client.instance_variable_get(:@storage)
     cache_key = auth_client.instance_variable_get(:@cache_key)
     token_data = {
-      "access_token" => "valid_token",
-      "expires_at" => Time.now.to_i + 3600,
-      "token_type" => "Bearer"
+      access_token: "valid_token",
+      expires_at: (Time.now + 3600).utc.iso8601,
+      scope: "auth_apim",
+      client_id: "test_client",
+      created_at: Time.now.utc.iso8601
     }
     storage.store(cache_key, token_data, 3600)
 

@@ -37,7 +37,7 @@ module JDPIClient
 
     # Token storage configuration helpers
     def shared_token_storage?
-      [:redis, :dynamodb, :database].include?(@token_storage_adapter)
+      %i[redis dynamodb database].include?(@token_storage_adapter)
     end
 
     def token_encryption_enabled?
@@ -59,10 +59,10 @@ module JDPIClient
               "Redis URL is required when using Redis token storage"
       end
 
-      if @token_storage_adapter == :dynamodb && (@token_storage_options[:table_name]).nil?
-        raise JDPIClient::Errors::ConfigurationError,
-              "DynamoDB table name is required when using DynamoDB token storage"
-      end
+      return unless @token_storage_adapter == :dynamodb && @token_storage_options[:table_name].nil?
+
+      raise JDPIClient::Errors::ConfigurationError,
+            "DynamoDB table name is required when using DynamoDB token storage"
     end
   end
 end

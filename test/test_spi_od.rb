@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class TestSPIOD < Minitest::Test
   def setup
-    super  # Important: Call parent setup for WebMock stubs
+    super # Important: Call parent setup for WebMock stubs
 
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"

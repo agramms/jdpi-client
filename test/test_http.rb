@@ -96,7 +96,7 @@ class TestHTTP < Minitest::Test
 
     # Test method signature accepts params keyword argument
     method = @http.method(:get)
-    assert method.arity < 0, "Get method should accept keyword arguments"
+    assert method.arity.negative?, "Get method should accept keyword arguments"
   end
 
   def test_idempotency_key_in_method_signature
@@ -104,8 +104,8 @@ class TestHTTP < Minitest::Test
     post_method = @http.method(:post)
     put_method = @http.method(:put)
 
-    assert post_method.arity < 0, "Post method should accept keyword arguments"
-    assert put_method.arity < 0, "Put method should accept keyword arguments"
+    assert post_method.arity.negative?, "Post method should accept keyword arguments"
+    assert put_method.arity.negative?, "Put method should accept keyword arguments"
   end
 
   def test_request_without_params_method_signature
@@ -137,6 +137,6 @@ class TestHTTP < Minitest::Test
 
     # Test request method arity allows for keyword arguments
     method = @http.method(:request)
-    assert method.arity < 0, "Request method should accept keyword arguments"
+    assert method.arity.negative?, "Request method should accept keyword arguments"
   end
 end

@@ -10,7 +10,7 @@ class TestScopeManager < Minitest::Test
   end
 
   def test_normalize_scopes_with_array
-    scopes = ["spi_api", "dict_api", "auth_apim"]
+    scopes = %w[spi_api dict_api auth_apim]
     normalized = JDPIClient::Auth::ScopeManager.normalize_scopes(scopes)
     assert_equal "auth_apim dict_api spi_api", normalized
   end
@@ -44,37 +44,37 @@ class TestScopeManager < Minitest::Test
   end
 
   def test_scopes_allowed_with_no_restrictions
-    scopes = ["auth_apim", "dict_api", "spi_api"]
+    scopes = %w[auth_apim dict_api spi_api]
     assert JDPIClient::Auth::ScopeManager.scopes_allowed?(scopes, nil)
   end
 
   def test_scopes_allowed_with_restrictions
-    scopes = ["auth_apim", "dict_api"]
-    allowed = ["auth_apim", "dict_api", "spi_api", "qrcode_api"]
+    scopes = %w[auth_apim dict_api]
+    allowed = %w[auth_apim dict_api spi_api qrcode_api]
     assert JDPIClient::Auth::ScopeManager.scopes_allowed?(scopes, allowed)
   end
 
   def test_scopes_not_allowed_with_restrictions
-    scopes = ["auth_apim", "dict_api", "spi_api"]
-    allowed = ["auth_apim", "dict_api"]
+    scopes = %w[auth_apim dict_api spi_api]
+    allowed = %w[auth_apim dict_api]
     refute JDPIClient::Auth::ScopeManager.scopes_allowed?(scopes, allowed)
   end
 
   def test_default_scopes_for_dict_read
     scopes = JDPIClient::Auth::ScopeManager.default_scopes_for(:dict, :read)
-    expected = ["auth_apim", "dict_api"]
+    expected = %w[auth_apim dict_api]
     assert_equal expected, scopes
   end
 
   def test_default_scopes_for_dict_write
     scopes = JDPIClient::Auth::ScopeManager.default_scopes_for(:dict, :write)
-    expected = ["auth_apim", "dict_api"]
+    expected = %w[auth_apim dict_api]
     assert_equal expected, scopes
   end
 
   def test_default_scopes_for_spi_payment
     scopes = JDPIClient::Auth::ScopeManager.default_scopes_for(:spi, :payment)
-    expected = ["auth_apim", "spi_api"]
+    expected = %w[auth_apim spi_api]
     assert_equal expected, scopes
   end
 
@@ -121,7 +121,7 @@ class TestScopeManager < Minitest::Test
   end
 
   def test_scope_parameter_formatting
-    scopes = ["dict_api", "auth_apim", "spi_api"]
+    scopes = %w[dict_api auth_apim spi_api]
     parameter = JDPIClient::Auth::ScopeManager.scope_parameter(scopes)
     assert_equal "auth_apim dict_api spi_api", parameter
   end

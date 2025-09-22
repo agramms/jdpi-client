@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # SimpleCov configuration for jdpi-client (Ruby 3.0+ gem)
 SimpleCov.configure do
   # Coverage output directory

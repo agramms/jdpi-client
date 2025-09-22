@@ -38,7 +38,7 @@ module JDPIClient
         # Get list of available storage adapters
         # @return [Array<Symbol>] Available adapter names
         def available_adapters
-          [:memory, :redis, :dynamodb, :database]
+          %i[memory redis dynamodb database]
         end
 
         # Check if an adapter is available (dependencies installed)

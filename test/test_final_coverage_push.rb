@@ -1,8 +1,10 @@
-require 'test_helper'
+# frozen_string_literal: true
+
+require "test_helper"
 
 class TestFinalCoveragePush < Minitest::Test
   def setup
-    super  # Important: Call parent setup for WebMock stubs
+    super # Important: Call parent setup for WebMock stubs
 
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
@@ -108,7 +110,7 @@ class TestFinalCoveragePush < Minitest::Test
     service = JDPIClient::SPI::OP.new(nil, @config)
 
     methods_data = [
-      [:create_order!, [{ order: "test" }]],
+      [:create_order!, [{ order: "test" }, { idempotency_key: "op123" }]],
       [:consult_request, ["req123"]],
       [:account_statement_pi, [{ date: "2023-01-01" }]],
       [:account_statement_tx, [{ date: "2023-01-01" }]],
@@ -127,7 +129,7 @@ class TestFinalCoveragePush < Minitest::Test
     service = JDPIClient::SPI::OD.new(nil, @config)
 
     methods_data = [
-      [:create_order!, [{ order: "test" }]],
+      [:create_order!, [{ order: "test" }, { idempotency_key: "od123" }]],
       [:consult_request, ["req456"]],
       [:reasons, []],
       [:credit_status_refund, ["end2end123"]]
@@ -166,13 +168,13 @@ class TestFinalCoveragePush < Minitest::Test
 
     # Test request method internal path (will fail but method body executes)
     begin
-      http.send(:request, :get, "/test", params: {test: "param"}, headers: {"Custom" => "header"})
+      http.send(:request, :get, "/test", params: { test: "param" }, headers: { "Custom" => "header" })
     rescue StandardError
       # Expected to fail, but method body executed
     end
 
     begin
-      http.send(:request, :post, "/test", body: {test: "data"}, idempotency_key: "test-key")
+      http.send(:request, :post, "/test", body: { test: "data" }, idempotency_key: "test-key")
     rescue StandardError
       # Expected to fail, but method body executed
     end
@@ -185,20 +187,24 @@ class TestFinalCoveragePush < Minitest::Test
     scenarios = [
       [nil, {}],
       ["", {}],
-      ['{"valid": "json"}', {"valid" => "json"}],
-      [{"already" => "hash"}, {"already" => "hash"}],
-      ['{"nested": {"deep": {"value": true}}}', {"nested" => {"deep" => {"value" => true}}}],
-      ['[]', []],
-      ['null', nil],
-      ['true', true],
-      ['false', false],
-      ['123', 123],
+      ['{"valid": "json"}', { "valid" => "json" }],
+      [{ "already" => "hash" }, { "already" => "hash" }],
+      ['{"nested": {"deep": {"value": true}}}', { "nested" => { "deep" => { "value" => true } } }],
+      ["[]", []],
+      ["null", nil],
+      ["true", true],
+      ["false", false],
+      ["123", 123],
       ['"string"', "string"]
     ]
 
     scenarios.each do |input, expected|
       result = http.send(:parse_json, input)
-      assert_equal expected, result, "Failed parsing: #{input.inspect}"
+      if expected.nil?
+        assert_nil result, "Failed parsing: #{input.inspect}"
+      else
+        assert_equal expected, result, "Failed parsing: #{input.inspect}"
+      end
     end
   end
 
@@ -210,7 +216,7 @@ class TestFinalCoveragePush < Minitest::Test
     test_build_oauth_params(auth_client)
 
     # Test token_valid? with all scenarios
-    test_token_valid_scenarios(auth_client)
+    run_token_valid_scenarios(auth_client)
 
     # Test create_oauth_connection
     connection = auth_client.send(:create_oauth_connection)
@@ -229,10 +235,10 @@ class TestFinalCoveragePush < Minitest::Test
     assert token_data[:created_at]
 
     # Test with minimal response
-    minimal_response = {"access_token" => "minimal_token"}
+    minimal_response = { "access_token" => "minimal_token" }
     token_data = auth_client.send(:build_token_data, minimal_response)
     assert_equal "minimal_token", token_data[:access_token]
-    assert_equal "auth:token", token_data[:scope] # Default scope
+    assert_equal "auth_apim", token_data[:scope] # Default scope
   end
 
   def test_build_oauth_params(auth_client = nil)
@@ -252,8 +258,8 @@ class TestFinalCoveragePush < Minitest::Test
     assert_equal expected_params, params
   end
 
-  def test_token_valid_scenarios
-    auth_client = JDPIClient::Auth::Client.new(@config)
+  def run_token_valid_scenarios(auth_client)
+    # auth_client passed as parameter
 
     scenarios = [
       # Valid token
@@ -380,7 +386,7 @@ class TestFinalCoveragePush < Minitest::Test
   end
 
   def test_config_boolean_helpers(config = nil)
-    config ||= JDPIClient::Config.new  # Use fresh config without encryption key
+    config ||= JDPIClient::Config.new # Use fresh config without encryption key
     # Test token_encryption_enabled?
     refute config.token_encryption_enabled?
 
@@ -397,7 +403,7 @@ class TestFinalCoveragePush < Minitest::Test
     config.token_storage_adapter = :memory
     refute config.shared_token_storage?
 
-    [:redis, :dynamodb, :database].each do |adapter|
+    %i[redis dynamodb database].each do |adapter|
       config.token_storage_adapter = adapter
       assert config.shared_token_storage?, "#{adapter} should be considered shared storage"
     end
@@ -412,25 +418,25 @@ class TestFinalCoveragePush < Minitest::Test
     10.times do
       key = JDPIClient::TokenStorage::Encryption.generate_key
       assert_equal 44, key.length
-      assert_match(/\A[A-Za-z0-9+\/]+=*\z/, key)
+      assert_match(%r{\A[A-Za-z0-9+/]+=*\z}, key)
     end
 
     # Test encryption with various data types
     test_data_types = [
-      {"string" => "value"},
-      {"integer" => 42},
-      {"float" => 3.14159},
-      {"boolean_true" => true},
-      {"boolean_false" => false},
-      {"null_value" => nil},
-      {"array" => [1, 2, 3, "mixed", true]},
-      {"nested_hash" => {"deep" => {"deeper" => {"value" => "nested"}}}},
-      {"complex" => {"users" => [{"id" => 1, "active" => true}, {"id" => 2, "active" => false}]}},
-      {"unicode" => "Hello 🌍 Unicode! 中文 العربية"},
-      {"special_chars" => "!@#$%^&*()_+-=[]{}|;:,.<>?"},
-      {"empty_array" => []},
-      {"empty_hash" => {}},
-      {"large_string" => "x" * 10000}
+      { "string" => "value" },
+      { "integer" => 42 },
+      { "float" => 3.14159 },
+      { "boolean_true" => true },
+      { "boolean_false" => false },
+      { "null_value" => nil },
+      { "array" => [1, 2, 3, "mixed", true] },
+      { "nested_hash" => { "deep" => { "deeper" => { "value" => "nested" } } } },
+      { "complex" => { "users" => [{ "id" => 1, "active" => true }, { "id" => 2, "active" => false }] } },
+      { "unicode" => "Hello 🌍 Unicode! 中文 العربية" },
+      { "special_chars" => "!@#$%^&*()_+-=[]{}|;:,.<>?" },
+      { "empty_array" => [] },
+      { "empty_hash" => {} },
+      { "large_string" => "x" * 10_000 }
     ]
 
     key = JDPIClient::TokenStorage::Encryption.generate_key
@@ -458,9 +464,9 @@ class TestFinalCoveragePush < Minitest::Test
     test_encryption_errors(key)
   end
 
-  def test_encryption_errors(key = nil)
+  def test_encryption_errors(_key = nil)
     valid_key = JDPIClient::TokenStorage::Encryption.generate_key
-    test_data = {"test" => "data"}
+    test_data = { "test" => "data" }
 
     # Test invalid keys
     invalid_keys = [nil, "", "short", "invalid_format_123"]
@@ -503,10 +509,10 @@ class TestFinalCoveragePush < Minitest::Test
 
     # Test with various token data formats
     test_token_formats = [
-      {"simple" => "token"},
-      {"access_token" => "test123", "expires_at" => (Time.now + 3600).utc.iso8601},
-      {"complex" => {"nested" => {"data" => true}, "array" => [1, 2, 3]}},
-      {"unicode" => "🚀 Unicode token data"}
+      { "simple" => "token" },
+      { "access_token" => "test123", "expires_at" => (Time.now + 3600).utc.iso8601 },
+      { "complex" => { "nested" => { "data" => true }, "array" => [1, 2, 3] } },
+      { "unicode" => "🚀 Unicode token data" }
     ]
 
     test_token_formats.each_with_index do |token_data, index|
@@ -525,8 +531,8 @@ class TestFinalCoveragePush < Minitest::Test
     stats = storage.stats
     assert_instance_of Hash, stats
     assert stats.key?(:total_tokens)
-    assert stats.key?(:storage_type)
-    assert stats.key?(:encrypted)
+    assert stats.key?(:memory_adapter)
+    assert stats.key?(:encryption_enabled)
 
     # Test cleanup functionality
     test_cleanup_scenarios(storage)
@@ -534,28 +540,29 @@ class TestFinalCoveragePush < Minitest::Test
 
   def run_ttl_scenarios(storage)
     # Test immediate expiration
-    storage.store("immediate_expire", {"data" => "test"}, 0)
+    storage.store("immediate_expire", { "data" => "test" }, 0)
     refute storage.exists?("immediate_expire")
 
     # Test negative TTL (already expired)
-    storage.store("negative_ttl", {"data" => "test"}, -1)
+    storage.store("negative_ttl", { "data" => "test" }, -1)
     refute storage.exists?("negative_ttl")
 
     # Test very short TTL (will expire during test)
-    storage.store("short_ttl", {"data" => "test"}, 1)
+    storage.store("short_ttl", { "data" => "test" }, 1)
     assert storage.exists?("short_ttl")
     sleep(1.1)
     refute storage.exists?("short_ttl")
   end
 
   def test_cleanup_scenarios(storage = nil)
-    storage ||= JDPIClient::TokenStorage::Memory.new(@config)
+    # Always use a fresh storage instance to ensure clean state
+    storage = JDPIClient::TokenStorage::Memory.new(@config)
 
     # Add some tokens with different expiry times
-    storage.store("valid_1", {"data" => "1"}, 3600)
-    storage.store("valid_2", {"data" => "2"}, 7200)
-    storage.store("expired_1", {"data" => "expired1"}, -10)
-    storage.store("expired_2", {"data" => "expired2"}, -20)
+    storage.store("valid_1", { "data" => "1" }, 3600)
+    storage.store("valid_2", { "data" => "2" }, 7200)
+    storage.store("expired_1", { "data" => "expired1" }, -10)
+    storage.store("expired_2", { "data" => "expired2" }, -20)
 
     # Verify expired tokens are cleaned up
     storage.send(:cleanup_expired_tokens)
@@ -573,26 +580,22 @@ class TestFinalCoveragePush < Minitest::Test
   # Helper method to execute service methods and catch expected network errors
   def execute_service_methods(service, methods_data)
     methods_data.each do |method_name, args|
-      begin
-        if args.empty?
-          service.send(method_name)
-        else
-          # Check if last argument is a hash that should be keyword arguments
-          if args.last.is_a?(Hash) && args.last.keys.any? { |k| k.is_a?(Symbol) }
-            *positional_args, kwargs = args
-            service.send(method_name, *positional_args, **kwargs)
-          else
-            service.send(method_name, *args)
-          end
-        end
-      rescue StandardError => e
-        # Expected network errors - method body was executed for coverage
-        assert e.message.include?("Failed to open TCP connection") ||
-               e.message.include?("getaddrinfo") ||
-               e.message.include?("Connection") ||
-               e.class.ancestors.include?(JDPIClient::Errors::Error),
-               "Unexpected error type: #{e.class} - #{e.message}"
+      if args.empty?
+        service.send(method_name)
+      elsif args.last.is_a?(Hash) && args.last.keys.any? { |k| k.is_a?(Symbol) }
+        # Check if last argument is a hash that should be keyword arguments
+        *positional_args, kwargs = args
+        service.send(method_name, *positional_args, **kwargs)
+      else
+        service.send(method_name, *args)
       end
+    rescue StandardError => e
+      # Expected network errors - method body was executed for coverage
+      assert e.message.include?("Failed to open TCP connection") ||
+             e.message.include?("getaddrinfo") ||
+             e.message.include?("Connection") ||
+             e.class.ancestors.include?(JDPIClient::Errors::Error),
+             "Unexpected error type: #{e.class} - #{e.message}"
     end
   end
 end

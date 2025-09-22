@@ -42,7 +42,7 @@ module JDPIClient
         )
 
         true
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "store token")
         false
       end
@@ -66,7 +66,7 @@ module JDPIClient
         # Deserialize and decrypt if needed
         token_data = MultiJson.load(result.item["token_data"])
         decrypt_if_enabled(token_data)
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "retrieve token")
         nil
       end
@@ -85,7 +85,7 @@ module JDPIClient
 
         expires_at = result.item["expires_at"]
         expires_at && expires_at >= Time.now.to_i
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "check token existence")
         false
       end
@@ -99,7 +99,7 @@ module JDPIClient
         )
 
         true
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "delete token")
         false
       end
@@ -144,7 +144,7 @@ module JDPIClient
         end
 
         true
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "clear all tokens")
         false
       end
@@ -154,7 +154,7 @@ module JDPIClient
       def healthy?
         @dynamodb.describe_table(table_name: @table_name)
         true
-      rescue
+      rescue StandardError
         false
       end
 
@@ -185,7 +185,7 @@ module JDPIClient
       rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
         # Lock already exists
         false
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "acquire lock")
         false
       end
@@ -211,7 +211,7 @@ module JDPIClient
       rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
         # We no longer own the lock (it expired)
         false
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "release lock")
         false
       end
@@ -257,7 +257,7 @@ module JDPIClient
           write_capacity: table.provisioned_throughput&.write_capacity_units,
           encryption_enabled: @config.token_encryption_enabled?
         }
-      rescue => e
+      rescue StandardError => e
         handle_dynamodb_error(e, "get stats")
         { error: e.message }
       end
@@ -277,7 +277,7 @@ module JDPIClient
 
         client_options = parse_dynamodb_options
         ::Aws::DynamoDB::Client.new(client_options)
-      rescue => e
+      rescue StandardError => e
         raise JDPIClient::Errors::ConfigurationError,
               "DynamoDB connection error: #{e.message}"
       end
@@ -300,9 +300,7 @@ module JDPIClient
         end
 
         # Local DynamoDB support for testing
-        if @config.token_storage_options[:endpoint]
-          options[:endpoint] = @config.token_storage_options[:endpoint]
-        end
+        options[:endpoint] = @config.token_storage_options[:endpoint] if @config.token_storage_options[:endpoint]
 
         options
       end
@@ -342,9 +340,7 @@ module JDPIClient
       def handle_dynamodb_error(error, operation)
         error_message = "DynamoDB #{operation} failed: #{error.message}"
 
-        if @config.logger
-          @config.logger.error(error_message)
-        end
+        @config.logger&.error(error_message)
 
         # Re-raise as appropriate JDPI client error
         case error

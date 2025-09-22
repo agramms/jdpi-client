@@ -30,7 +30,11 @@ module JDPIClient
         token_data = retrieve(key)
         return false unless token_data
 
-        expires_at = Time.parse(token_data[:expires_at]) rescue nil
+        expires_at = begin
+          Time.parse(token_data[:expires_at])
+        rescue StandardError
+          nil
+        end
         return false unless expires_at
 
         Time.now < expires_at
@@ -79,7 +83,7 @@ module JDPIClient
       # @return [Hash] Decrypted or original data
       def decrypt_if_enabled(data)
         return data unless @config.token_encryption_enabled?
-        return data unless data.is_a?(Hash) && (data[:encrypted] || data['encrypted'])
+        return data unless data.is_a?(Hash) && (data[:encrypted] || data["encrypted"])
 
         require_relative "encryption"
         JDPIClient::TokenStorage::Encryption.decrypt(data, @config.token_encryption_key)

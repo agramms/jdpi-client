@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class TestMaximumCoverage < Minitest::Test
   def setup
-    super  # Important: Call parent setup for WebMock stubs
+    super # Important: Call parent setup for WebMock stubs
 
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
@@ -148,11 +148,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error, but method body executed
-      end
+      method.call
+    rescue StandardError
+      # Expected network error, but method body executed
     end
   end
 
@@ -167,11 +165,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -186,11 +182,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -207,11 +201,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -230,11 +222,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -247,11 +237,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -262,11 +250,9 @@ class TestMaximumCoverage < Minitest::Test
     ]
 
     methods_to_test.each do |method|
-      begin
-        method.call
-      rescue StandardError
-        # Expected network error
-      end
+      method.call
+    rescue StandardError
+      # Expected network error
     end
   end
 
@@ -393,7 +379,7 @@ class TestMaximumCoverage < Minitest::Test
 
   def test_scope_manager_comprehensive_coverage
     # Test array input
-    result = JDPIClient::Auth::ScopeManager.normalize_scopes(["scope1", "scope2"])
+    result = JDPIClient::Auth::ScopeManager.normalize_scopes(%w[scope1 scope2])
     assert_equal "scope1 scope2", result
 
     # Test string input with extra whitespace
@@ -409,7 +395,7 @@ class TestMaximumCoverage < Minitest::Test
     assert_equal "", result
 
     # Test parse_scopes_from_response
-    response = {"scope" => "auth:token dict:read"}
+    response = { "scope" => "auth:token dict:read" }
     result = JDPIClient::Auth::ScopeManager.parse_scopes_from_response(response)
     assert_equal "auth:token dict:read", result
 
@@ -474,7 +460,7 @@ class TestMaximumCoverage < Minitest::Test
     factory = JDPIClient::TokenStorage::Factory
 
     # Test all known adapters
-    [:memory, :redis, :dynamodb, :database].each do |adapter|
+    %i[memory redis dynamodb database].each do |adapter|
       result = factory.adapter_available?(adapter)
       assert [true, false].include?(result)
     end
@@ -495,7 +481,7 @@ class TestMaximumCoverage < Minitest::Test
     key2 = JDPIClient::TokenStorage::Encryption.generate_key
     refute_equal key1, key2 # Keys should be unique
 
-    data = {"test" => "data", "number" => 123}
+    data = { "test" => "data", "number" => 123 }
 
     # Test encryption/decryption cycle
     encrypted = JDPIClient::TokenStorage::Encryption.encrypt(data, key1)
@@ -526,12 +512,12 @@ class TestMaximumCoverage < Minitest::Test
     assert_equal 0, stats[:total_tokens]
 
     # Store a token and check stats
-    storage.store("test_key", {"token" => "test"}, 3600)
+    storage.store("test_key", { "token" => "test" }, 3600)
     stats = storage.stats
     assert_equal 1, stats[:total_tokens]
 
     # Store an expired token
-    storage.store("expired_key", {"token" => "test"}, -1) # Already expired
+    storage.store("expired_key", { "token" => "test" }, -1) # Already expired
 
     # Should not exist after cleanup
     refute storage.exists?("expired_key")

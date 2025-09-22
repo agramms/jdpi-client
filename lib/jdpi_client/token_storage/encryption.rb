@@ -67,9 +67,7 @@ module JDPIClient
           validate_encrypted_data!(encrypted_data)
 
           # Convert to symbols for consistent access if using string keys
-          if encrypted_data.keys.first.is_a?(String)
-            encrypted_data = encrypted_data.transform_keys(&:to_sym)
-          end
+          encrypted_data = encrypted_data.transform_keys(&:to_sym) if encrypted_data.keys.first.is_a?(String)
 
           # Extract components
           salt = Base64.strict_decode64(encrypted_data[:salt])
@@ -148,23 +146,21 @@ module JDPIClient
             salt,
             KEY_ITERATIONS,
             32, # 256 bits
-            OpenSSL::Digest::SHA256.new
+            OpenSSL::Digest.new("SHA256")
           )
         end
 
         # Validate encrypted data structure
         # @param data [Hash] Encrypted data to validate
         def validate_encrypted_data!(data)
-          unless data.is_a?(Hash) && (data[:encrypted] || data['encrypted'])
+          unless data.is_a?(Hash) && (data[:encrypted] || data["encrypted"])
             raise JDPIClient::Errors::ConfigurationError, "Invalid encrypted token data"
           end
 
           # Convert to symbols for consistent access if using string keys
-          if data.keys.first.is_a?(String)
-            data = data.transform_keys(&:to_sym)
-          end
+          data = data.transform_keys(&:to_sym) if data.keys.first.is_a?(String)
 
-          required_fields = [:version, :algorithm, :salt, :iv, :auth_tag, :ciphertext]
+          required_fields = %i[version algorithm salt iv auth_tag ciphertext]
           missing_fields = required_fields - data.keys
 
           unless missing_fields.empty?
@@ -177,10 +173,10 @@ module JDPIClient
                   "Unsupported encryption algorithm: #{data[:algorithm]}"
           end
 
-          unless data[:version] == 1
-            raise JDPIClient::Errors::ConfigurationError,
-                  "Unsupported encryption version: #{data[:version]}"
-          end
+          return if data[:version] == 1
+
+          raise JDPIClient::Errors::ConfigurationError,
+                "Unsupported encryption version: #{data[:version]}"
         end
       end
     end

@@ -1,24 +1,26 @@
-require 'test_helper'
+# frozen_string_literal: true
+
+require "test_helper"
 
 class TestTokenStorageDatabase < Minitest::Test
   include ServiceConfiguration
 
   def setup
-    @sqlite_url = 'sqlite3:///:memory:'
+    @sqlite_url = "sqlite3:///:memory:"
     @config = create_database_config(@sqlite_url)
 
     @token = {
-      'access_token' => 'test_token_123',
-      'token_type' => 'Bearer',
-      'expires_in' => 3600,
-      'scope' => 'read write'
+      "access_token" => "test_token_123",
+      "token_type" => "Bearer",
+      "expires_in" => 3600,
+      "scope" => "read write"
     }
 
     @sensitive_token = {
-      'access_token' => 'very_secret_token_12345',
-      'token_type' => 'Bearer',
-      'expires_in' => 3600,
-      'scope' => 'sensitive write'
+      "access_token" => "very_secret_token_12345",
+      "token_type" => "Bearer",
+      "expires_in" => 3600,
+      "scope" => "sensitive write"
     }
 
     @storage = JDPIClient::TokenStorage::Database.new(@config)
@@ -42,7 +44,7 @@ class TestTokenStorageDatabase < Minitest::Test
         @storage.connection.execute("DELETE FROM jdpi_tokens WHERE cache_key LIKE 'test_%'")
         @storage.connection.execute("DELETE FROM jdpi_token_locks WHERE lock_key LIKE 'test_%'")
       end
-    rescue
+    rescue StandardError
       # Ignore cleanup errors in tests
     end
   end
@@ -61,7 +63,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_store_and_retrieve_token
-    key = 'test_store_retrieve_' + SecureRandom.hex(8)
+    key = "test_store_retrieve_#{SecureRandom.hex(8)}"
     @storage.store(key, @token, 3600)
 
     retrieved = @storage.retrieve(key)
@@ -69,23 +71,23 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_retrieve_returns_nil_for_missing_key
-    result = @storage.retrieve('test_missing_' + SecureRandom.hex(8))
+    result = @storage.retrieve("test_missing_#{SecureRandom.hex(8)}")
     assert_nil result
   end
 
   def test_exists_returns_true_for_stored_token
-    key = 'test_exists_true_' + SecureRandom.hex(8)
+    key = "test_exists_true_#{SecureRandom.hex(8)}"
     @storage.store(key, @token, 3600)
 
     assert @storage.exists?(key)
   end
 
   def test_exists_returns_false_for_missing_token
-    refute @storage.exists?('test_missing_' + SecureRandom.hex(8))
+    refute @storage.exists?("test_missing_#{SecureRandom.hex(8)}")
   end
 
   def test_delete_removes_token
-    key = 'test_delete_' + SecureRandom.hex(8)
+    key = "test_delete_#{SecureRandom.hex(8)}"
     @storage.store(key, @token, 3600)
 
     @storage.delete(key)
@@ -94,7 +96,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_clear_all_removes_matching_tokens
-    prefix = 'test_clear_' + SecureRandom.hex(4)
+    prefix = "test_clear_#{SecureRandom.hex(4)}"
     key1 = "jdpi_client:#{prefix}_key1"
     key2 = "jdpi_client:#{prefix}_key2"
     key3 = "other:#{prefix}_key3"
@@ -117,29 +119,29 @@ class TestTokenStorageDatabase < Minitest::Test
   def test_store_encrypts_data_when_encryption_enabled
     return unless @config.token_encryption_enabled?
 
-    key = 'test_encrypted_' + SecureRandom.hex(8)
+    key = "test_encrypted_#{SecureRandom.hex(8)}"
     @storage.store(key, @sensitive_token, 3600)
 
     # Verify data is encrypted in database by querying raw data
     begin
       if @storage.respond_to?(:connection) && @storage.connection
         result = @storage.connection.execute("SELECT token_data FROM jdpi_tokens WHERE cache_key = '#{key}'")
-        raw_data = result.first&.dig('token_data') || result.first&.dig(0) # Handle different SQLite adapters
+        raw_data = result.first&.dig("token_data") || result.first&.dig(0) # Handle different SQLite adapters
 
         # Raw data should not contain the sensitive token
-        refute_includes raw_data, 'very_secret_token_12345'
+        refute_includes raw_data, "very_secret_token_12345"
 
         # But decrypted data should match
         retrieved = @storage.retrieve(key)
         assert_equal @sensitive_token, retrieved
       end
-    rescue => e
+    rescue StandardError => e
       skip "Could not verify encryption: #{e.message}"
     end
   end
 
   def test_token_expiration
-    key = 'test_expiration_' + SecureRandom.hex(8)
+    key = "test_expiration_#{SecureRandom.hex(8)}"
     @storage.store(key, @token, 0) # Store with immediate expiration
 
     # Wait a bit to ensure expiration
@@ -154,7 +156,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_token_ttl_configuration
-    key = 'test_ttl_' + SecureRandom.hex(8)
+    key = "test_ttl_#{SecureRandom.hex(8)}"
     ttl = 2 # 2 seconds
 
     @storage.store(key, @token, ttl)
@@ -172,8 +174,8 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_cleanup_expired_tokens
-    current_key = 'test_current_' + SecureRandom.hex(8)
-    expired_key = 'test_expired_' + SecureRandom.hex(8)
+    current_key = "test_current_#{SecureRandom.hex(8)}"
+    expired_key = "test_expired_#{SecureRandom.hex(8)}"
 
     # Store a current token
     @storage.store(current_key, @token, 3600)
@@ -193,7 +195,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_acquire_lock_inserts_with_unique_constraint
-    key = 'test_lock_unique_' + SecureRandom.hex(8)
+    key = "test_lock_unique_#{SecureRandom.hex(8)}"
 
     # First acquisition should succeed
     result1 = @storage.send(:acquire_lock, key)
@@ -205,7 +207,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_release_lock_deletes_lock_record
-    key = 'test_lock_release_' + SecureRandom.hex(8)
+    key = "test_lock_release_#{SecureRandom.hex(8)}"
 
     # Acquire lock first
     @storage.send(:acquire_lock, key)
@@ -220,36 +222,35 @@ class TestTokenStorageDatabase < Minitest::Test
 
   def test_migration_creates_table_structure
     # Test that tables exist and have correct structure
-    begin
-      if @storage.respond_to?(:connection) && @storage.connection
-        # Check tokens table exists and has required columns
-        tokens_result = @storage.connection.execute(<<~SQL)
-          PRAGMA table_info(jdpi_tokens)
-        SQL
 
-        token_columns = tokens_result.map { |row| row['name'] || row[1] } # Handle different SQLite adapters
-        assert_includes token_columns, 'cache_key'
-        assert_includes token_columns, 'token_data'
-        assert_includes token_columns, 'expires_at'
-        assert_includes token_columns, 'created_at'
+    if @storage.respond_to?(:connection) && @storage.connection
+      # Check tokens table exists and has required columns
+      tokens_result = @storage.connection.execute(<<~SQL)
+        PRAGMA table_info(jdpi_tokens)
+      SQL
 
-        # Check locks table exists and has required columns
-        locks_result = @storage.connection.execute(<<~SQL)
-          PRAGMA table_info(jdpi_token_locks)
-        SQL
+      token_columns = tokens_result.map { |row| row["name"] || row[1] } # Handle different SQLite adapters
+      assert_includes token_columns, "cache_key"
+      assert_includes token_columns, "token_data"
+      assert_includes token_columns, "expires_at"
+      assert_includes token_columns, "created_at"
 
-        lock_columns = locks_result.map { |row| row['name'] || row[1] } # Handle different SQLite adapters
-        assert_includes lock_columns, 'lock_key'
-        assert_includes lock_columns, 'expires_at'
-        assert_includes lock_columns, 'created_at'
-      end
-    rescue => e
-      skip "Could not verify table structure: #{e.message}"
+      # Check locks table exists and has required columns
+      locks_result = @storage.connection.execute(<<~SQL)
+        PRAGMA table_info(jdpi_token_locks)
+      SQL
+
+      lock_columns = locks_result.map { |row| row["name"] || row[1] } # Handle different SQLite adapters
+      assert_includes lock_columns, "lock_key"
+      assert_includes lock_columns, "expires_at"
+      assert_includes lock_columns, "created_at"
     end
+  rescue StandardError => e
+    skip "Could not verify table structure: #{e.message}"
   end
 
   def test_thread_safety_with_locks
-    key = 'test_thread_safety_' + SecureRandom.hex(8)
+    key = "test_thread_safety_#{SecureRandom.hex(8)}"
     results = {}
     threads = []
 
@@ -268,7 +269,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_concurrent_store_and_retrieve
-    base_key = 'test_concurrent_' + SecureRandom.hex(4)
+    base_key = "test_concurrent_#{SecureRandom.hex(4)}"
     threads = []
     results = {}
 
@@ -276,7 +277,7 @@ class TestTokenStorageDatabase < Minitest::Test
     10.times do |i|
       threads << Thread.new do
         key = "#{base_key}_#{i}"
-        token = @token.merge('access_token' => "token_#{i}")
+        token = @token.merge("access_token" => "token_#{i}")
 
         @storage.store(key, token, 3600)
         retrieved = @storage.retrieve(key)
@@ -292,14 +293,14 @@ class TestTokenStorageDatabase < Minitest::Test
 
   def test_error_handling_for_invalid_database_url
     config = JDPIClient::Config.new
-    config.token_encryption_key = 'test_encryption_key_32_characters'
-    config.token_storage_url = 'invalid://url'
+    config.token_encryption_key = "test_encryption_key_32_characters"
+    config.token_storage_url = "invalid://url"
 
     error = assert_raises(JDPIClient::Errors::ConfigurationError) do
       JDPIClient::TokenStorage::Database.new(config)
     end
 
-    assert_includes error.message.downcase, 'database connection error'
+    assert_includes error.message.downcase, "database connection error"
   end
 
   def test_missing_sqlite3_gem_graceful_handling
@@ -311,8 +312,8 @@ class TestTokenStorageDatabase < Minitest::Test
   def test_database_connection_error_handling
     # Create storage with invalid SQLite URL to trigger connection error
     config = JDPIClient::Config.new
-    config.token_encryption_key = 'test_encryption_key_32_characters'
-    config.token_storage_url = 'sqlite3:///invalid/path/that/does/not/exist/db.sqlite3'
+    config.token_encryption_key = "test_encryption_key_32_characters"
+    config.token_storage_url = "sqlite3:///invalid/path/that/does/not/exist/db.sqlite3"
 
     error = assert_raises do
       storage = JDPIClient::TokenStorage::Database.new(config)
@@ -324,23 +325,23 @@ class TestTokenStorageDatabase < Minitest::Test
 
   def test_sqlite_json_storage_features
     # Test SQLite JSON storage capabilities
-    key = 'test_sqlite_features_' + SecureRandom.hex(8)
+    key = "test_sqlite_features_#{SecureRandom.hex(8)}"
     complex_token = @token.merge(
-      'metadata' => { 'source' => 'test', 'features' => ['read', 'write'] },
-      'custom_data' => 'SQLite test data with JSON'
+      "metadata" => { "source" => "test", "features" => %w[read write] },
+      "custom_data" => "SQLite test data with JSON"
     )
 
     @storage.store(key, complex_token, 3600)
     retrieved = @storage.retrieve(key)
 
     assert_equal complex_token, retrieved
-    assert_equal complex_token['metadata'], retrieved['metadata']
+    assert_equal complex_token["metadata"], retrieved["metadata"]
   end
 
   def test_stats_returns_database_information
     # Store some test tokens to get meaningful stats
-    @storage.store('test_stats_active_' + SecureRandom.hex(4), @token, 3600)
-    @storage.store('test_stats_expired_' + SecureRandom.hex(4), @token, 0)
+    @storage.store("test_stats_active_#{SecureRandom.hex(4)}", @token, 3600)
+    @storage.store("test_stats_expired_#{SecureRandom.hex(4)}", @token, 0)
     sleep(0.1) # Ensure expiration
 
     stats = @storage.stats
@@ -353,12 +354,12 @@ class TestTokenStorageDatabase < Minitest::Test
     assert_includes stats, :encryption_enabled
     assert_includes stats, :database_adapter
 
-    assert_equal 'jdpi_client_tokens', stats[:table_name]
+    assert_equal "jdpi_client_tokens", stats[:table_name]
     assert stats[:total_tokens] >= 2
     assert stats[:active_tokens] >= 1
     assert stats[:expired_tokens] >= 1
     assert_instance_of TrueClass, stats[:encryption_enabled]
-    assert_equal 'SQLite', stats[:database_adapter]
+    assert_equal "SQLite", stats[:database_adapter]
   end
 
   def test_stats_handles_errors_gracefully
@@ -372,9 +373,9 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_upsert_behavior_on_duplicate_keys
-    key = 'test_upsert_' + SecureRandom.hex(8)
-    original_token = @token.merge('access_token' => 'original_token')
-    updated_token = @token.merge('access_token' => 'updated_token')
+    key = "test_upsert_#{SecureRandom.hex(8)}"
+    original_token = @token.merge("access_token" => "original_token")
+    updated_token = @token.merge("access_token" => "updated_token")
 
     # Store original token
     @storage.store(key, original_token, 3600)
@@ -384,11 +385,11 @@ class TestTokenStorageDatabase < Minitest::Test
     @storage.store(key, updated_token, 3600)
     retrieved = @storage.retrieve(key)
     assert_equal updated_token, retrieved
-    assert_equal 'updated_token', retrieved['access_token']
+    assert_equal "updated_token", retrieved["access_token"]
   end
 
   def test_store_with_zero_ttl_creates_expired_token
-    key = 'test_zero_ttl_' + SecureRandom.hex(8)
+    key = "test_zero_ttl_#{SecureRandom.hex(8)}"
 
     @storage.store(key, @token, 0)
 
@@ -399,7 +400,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_store_with_negative_ttl_handled_gracefully
-    key = 'test_negative_ttl_' + SecureRandom.hex(8)
+    key = "test_negative_ttl_#{SecureRandom.hex(8)}"
 
     result = @storage.store(key, @token, -100)
     assert result # Store should succeed
@@ -410,27 +411,27 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_retrieve_handles_corrupted_json_data
-    key = 'test_corrupted_' + SecureRandom.hex(8)
+    key = "test_corrupted_#{SecureRandom.hex(8)}"
 
     # Manually insert corrupted data
     begin
       if @storage.respond_to?(:connection) && @storage.connection
         @storage.connection.execute(
           "INSERT INTO #{@storage.instance_variable_get(:@table_name)} (token_key, token_data, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [key, 'invalid json data', Time.now + 3600, Time.now, Time.now]
+          [key, "invalid json data", Time.now + 3600, Time.now, Time.now]
         )
 
         # Should handle gracefully and return nil
         result = @storage.retrieve(key)
         assert_nil result
       end
-    rescue => e
+    rescue StandardError => e
       skip "Could not test corrupted data scenario: #{e.message}"
     end
   end
 
   def test_delete_returns_false_for_nonexistent_key
-    result = @storage.delete('nonexistent_' + SecureRandom.hex(8))
+    result = @storage.delete("nonexistent_#{SecureRandom.hex(8)}")
     refute result
   end
 
@@ -441,7 +442,7 @@ class TestTokenStorageDatabase < Minitest::Test
     # Store 50 tokens
     50.times do |i|
       key = "test_massive_#{i}_#{SecureRandom.hex(4)}"
-      token = @token.merge('access_token' => "token_#{i}")
+      token = @token.merge("access_token" => "token_#{i}")
       keys << key
       tokens[key] = token
 
@@ -453,14 +454,14 @@ class TestTokenStorageDatabase < Minitest::Test
     keys.each do |key|
       retrieved = @storage.retrieve(key)
       assert_equal tokens[key], retrieved, "Token mismatch for key #{key}"
-    end
 
-    # Clean up
-    keys.each { |key| @storage.delete(key) }
+      # Clean up
+      @storage.delete(key)
+    end
   end
 
   def test_lock_expiration_and_cleanup
-    key = 'test_lock_expiry_' + SecureRandom.hex(8)
+    key = "test_lock_expiry_#{SecureRandom.hex(8)}"
     short_ttl = 1 # 1 second
 
     # Acquire lock with short TTL
@@ -482,7 +483,7 @@ class TestTokenStorageDatabase < Minitest::Test
   def test_database_adapter_detection
     adapter_name = @storage.send(:database_adapter_name)
     assert_instance_of String, adapter_name
-    assert_equal 'SQLite', adapter_name
+    assert_equal "SQLite", adapter_name
   end
 
   def test_table_creation_idempotency
@@ -492,7 +493,7 @@ class TestTokenStorageDatabase < Minitest::Test
     end
 
     # Should still be functional
-    key = 'test_table_idempotent_' + SecureRandom.hex(8)
+    key = "test_table_idempotent_#{SecureRandom.hex(8)}"
     @storage.store(key, @token, 3600)
     assert @storage.exists?(key)
   end
@@ -508,35 +509,33 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_table_structure_indexes_exist
-    begin
-      if @storage.respond_to?(:connection) && @storage.connection
-        # Check that indexes exist for performance
-        index_result = @storage.connection.execute("PRAGMA index_list(#{@storage.instance_variable_get(:@table_name)})")
-        index_names = index_result.map { |row| row['name'] || row[1] }
+    if @storage.respond_to?(:connection) && @storage.connection
+      # Check that indexes exist for performance
+      index_result = @storage.connection.execute("PRAGMA index_list(#{@storage.instance_variable_get(:@table_name)})")
+      index_names = index_result.map { |row| row["name"] || row[1] }
 
-        # Should have index on expires_at for cleanup efficiency
-        assert index_names.any? { |name| name.include?('expires_at') }, "Missing expires_at index"
-      end
-    rescue => e
-      skip "Could not verify indexes: #{e.message}"
+      # Should have index on expires_at for cleanup efficiency
+      assert index_names.any? { |name| name.include?("expires_at") }, "Missing expires_at index"
     end
+  rescue StandardError => e
+    skip "Could not verify indexes: #{e.message}"
   end
 
   def test_with_lock_executes_block_with_distributed_lock
-    key = 'test_with_lock_' + SecureRandom.hex(8)
+    key = "test_with_lock_#{SecureRandom.hex(8)}"
     executed = false
 
     result = @storage.with_lock(key) do
       executed = true
-      'block_result'
+      "block_result"
     end
 
     assert executed, "Block should have been executed"
-    assert_equal 'block_result', result
+    assert_equal "block_result", result
   end
 
   def test_with_lock_prevents_concurrent_execution
-    key = 'test_with_lock_concurrent_' + SecureRandom.hex(8)
+    key = "test_with_lock_concurrent_#{SecureRandom.hex(8)}"
     results = []
     threads = []
 
@@ -561,14 +560,14 @@ class TestTokenStorageDatabase < Minitest::Test
     # Verify sequential execution (each start should be followed by its end)
     thread_patterns = results.each_slice(2).to_a
     thread_patterns.each do |start_event, end_event|
-      assert start_event.end_with?('_start')
-      assert end_event.end_with?('_end')
-      assert start_event.split('_')[1] == end_event.split('_')[1] # Same thread ID
+      assert start_event.end_with?("_start")
+      assert end_event.end_with?("_end")
+      assert start_event.split("_")[1] == end_event.split("_")[1] # Same thread ID
     end
   end
 
   def test_with_lock_releases_lock_on_exception
-    key = 'test_with_lock_exception_' + SecureRandom.hex(8)
+    key = "test_with_lock_exception_#{SecureRandom.hex(8)}"
 
     # First execution should raise an exception
     assert_raises(StandardError) do
@@ -587,7 +586,7 @@ class TestTokenStorageDatabase < Minitest::Test
   end
 
   def test_with_lock_timeout_after_max_retries
-    key = 'test_with_lock_timeout_' + SecureRandom.hex(8)
+    key = "test_with_lock_timeout_#{SecureRandom.hex(8)}"
 
     # Acquire lock manually to block with_lock
     @storage.send(:acquire_lock, key, 30)

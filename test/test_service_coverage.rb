@@ -1,4 +1,6 @@
-require 'test_helper'
+# frozen_string_literal: true
+
+require "test_helper"
 
 class TestServiceCoverage < Minitest::Test
   def setup
@@ -109,8 +111,8 @@ class TestServiceCoverage < Minitest::Test
     config.token_storage_url = "redis://localhost:6379"
     assert_equal "redis://localhost:6379", config.token_storage_url
 
-    config.token_storage_options = {db: 1}
-    assert_equal({db: 1}, config.token_storage_options)
+    config.token_storage_options = { db: 1 }
+    assert_equal({ db: 1 }, config.token_storage_options)
 
     config.token_encryption_key = "test_key"
     assert_equal "test_key", config.token_encryption_key
@@ -129,43 +131,43 @@ class TestServiceCoverage < Minitest::Test
   def test_all_error_messages
     # Test specific error message content for coverage
     begin
-      raise JDPIClient::Errors::ConfigurationError.new("Test config error")
+      raise JDPIClient::Errors::ConfigurationError, "Test config error"
     rescue JDPIClient::Errors::ConfigurationError => e
       assert_equal "Test config error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::Unauthorized.new("Test auth error")
+      raise JDPIClient::Errors::Unauthorized, "Test auth error"
     rescue JDPIClient::Errors::Unauthorized => e
       assert_equal "Test auth error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::Forbidden.new("Test forbidden error")
+      raise JDPIClient::Errors::Forbidden, "Test forbidden error"
     rescue JDPIClient::Errors::Forbidden => e
       assert_equal "Test forbidden error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::NotFound.new("Test not found error")
+      raise JDPIClient::Errors::NotFound, "Test not found error"
     rescue JDPIClient::Errors::NotFound => e
       assert_equal "Test not found error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::RateLimited.new("Test rate limit error")
+      raise JDPIClient::Errors::RateLimited, "Test rate limit error"
     rescue JDPIClient::Errors::RateLimited => e
       assert_equal "Test rate limit error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::ServerError.new("Test server error")
+      raise JDPIClient::Errors::ServerError, "Test server error"
     rescue JDPIClient::Errors::ServerError => e
       assert_equal "Test server error", e.message
     end
 
     begin
-      raise JDPIClient::Errors::Validation.new("Test validation error")
+      raise JDPIClient::Errors::Validation, "Test validation error"
     rescue JDPIClient::Errors::Validation => e
       assert_equal "Test validation error", e.message
     end
@@ -201,7 +203,7 @@ class TestServiceCoverage < Minitest::Test
     factory = JDPIClient::TokenStorage::Factory
 
     # Test checking all known adapters
-    [:memory, :redis, :dynamodb, :database].each do |adapter|
+    %i[memory redis dynamodb database].each do |adapter|
       availability = factory.adapter_available?(adapter)
       assert [true, false].include?(availability), "adapter_available? should return boolean for #{adapter}"
     end

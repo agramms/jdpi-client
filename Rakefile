@@ -87,37 +87,37 @@ namespace :services do
 
     # Test Redis connection
     begin
-      require 'redis'
-      redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'))
+      require "redis"
+      redis = Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"))
       redis.ping
       puts "✅ Redis connection verified"
-    rescue => e
+    rescue StandardError => e
       puts "❌ Redis setup failed: #{e.message}"
     end
 
     # Test PostgreSQL connection
     begin
-      require 'pg'
-      conn = PG.connect(ENV.fetch('DATABASE_URL', 'postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test'))
+      require "pg"
+      conn = PG.connect(ENV.fetch("DATABASE_URL", "postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test"))
       conn.exec("SELECT 1")
       conn.close
       puts "✅ PostgreSQL connection verified"
-    rescue => e
+    rescue StandardError => e
       puts "❌ PostgreSQL setup failed: #{e.message}"
     end
 
     # Test DynamoDB connection
     begin
-      require 'aws-sdk-dynamodb'
+      require "aws-sdk-dynamodb"
       dynamodb = Aws::DynamoDB::Client.new(
-        endpoint: ENV.fetch('DYNAMODB_ENDPOINT', 'http://localhost:8000'),
-        region: 'us-east-1',
-        access_key_id: 'fakekey',
-        secret_access_key: 'fakesecret'
+        endpoint: ENV.fetch("DYNAMODB_ENDPOINT", "http://localhost:8000"),
+        region: "us-east-1",
+        access_key_id: "fakekey",
+        secret_access_key: "fakesecret"
       )
       dynamodb.list_tables
       puts "✅ DynamoDB Local connection verified"
-    rescue => e
+    rescue StandardError => e
       puts "❌ DynamoDB setup failed: #{e.message}"
     end
 
@@ -130,22 +130,22 @@ namespace :services do
 
     # Clear Redis
     begin
-      require 'redis'
-      redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'))
+      require "redis"
+      redis = Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"))
       redis.flushdb
       puts "✅ Redis data cleared"
-    rescue => e
+    rescue StandardError => e
       puts "❌ Redis reset failed: #{e.message}"
     end
 
     # Clear PostgreSQL test data
     begin
-      require 'pg'
-      conn = PG.connect(ENV.fetch('DATABASE_URL', 'postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test'))
+      require "pg"
+      conn = PG.connect(ENV.fetch("DATABASE_URL", "postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test"))
       conn.exec("DELETE FROM jdpi_client_tokens WHERE token_key LIKE 'test_%'")
       conn.close
       puts "✅ PostgreSQL test data cleared"
-    rescue => e
+    rescue StandardError => e
       puts "❌ PostgreSQL reset failed: #{e.message}"
     end
 
@@ -157,36 +157,34 @@ namespace :services do
     puts "🔍 Checking service health..."
 
     services = [
-      ['Redis', -> {
-        require 'redis'
-        Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0')).ping
+      ["Redis", lambda {
+        require "redis"
+        Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0")).ping
       }],
-      ['PostgreSQL', -> {
-        require 'pg'
-        conn = PG.connect(ENV.fetch('DATABASE_URL', 'postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test'))
+      ["PostgreSQL", lambda {
+        require "pg"
+        conn = PG.connect(ENV.fetch("DATABASE_URL", "postgresql://jdpi_user:jdpi_password@localhost:5432/jdpi_test"))
         result = conn.exec("SELECT 1").values.first.first == "1"
         conn.close
         result
       }],
-      ['DynamoDB', -> {
-        require 'aws-sdk-dynamodb'
+      ["DynamoDB", lambda {
+        require "aws-sdk-dynamodb"
         Aws::DynamoDB::Client.new(
-          endpoint: ENV.fetch('DYNAMODB_ENDPOINT', 'http://localhost:8000'),
-          region: 'us-east-1',
-          access_key_id: 'fakekey',
-          secret_access_key: 'fakesecret'
+          endpoint: ENV.fetch("DYNAMODB_ENDPOINT", "http://localhost:8000"),
+          region: "us-east-1",
+          access_key_id: "fakekey",
+          secret_access_key: "fakesecret"
         ).list_tables
         true
       }]
     ]
 
     services.each do |name, check|
-      begin
-        check.call
-        puts "✅ #{name} is healthy"
-      rescue => e
-        puts "❌ #{name} is unhealthy: #{e.message}"
-      end
+      check.call
+      puts "✅ #{name} is healthy"
+    rescue StandardError => e
+      puts "❌ #{name} is unhealthy: #{e.message}"
     end
   end
 end

@@ -34,7 +34,7 @@ if ENV["COVERAGE"] == "true"
   end
 
   # Only log coverage info if logger is available and debug level
-  if defined?(Logger) && ENV['DEBUG']
+  if defined?(Logger) && ENV["DEBUG"]
     logger = Logger.new($stdout)
     logger.debug("📊 Coverage tracking enabled for Ruby #{RUBY_VERSION}")
   end
@@ -42,7 +42,7 @@ end
 
 # Service integration configuration with mocking
 module ServiceConfiguration
-  extend self
+  module_function
 
   def integration_tests_enabled?
     true # Always enabled since we use mocks
@@ -63,7 +63,7 @@ module ServiceConfiguration
   def adapter_for_test
     return :memory if ENV["SKIP_INTEGRATION"] == "true"
 
-    case ENV["TEST_ADAPTER"]
+    case ENV.fetch("TEST_ADAPTER", nil)
     when "memory" then :memory
     when "redis" then :redis
     when "postgres", "postgresql", "database" then :database
@@ -88,22 +88,19 @@ module ServiceConfiguration
     when :redis
       config.token_storage_adapter = :redis
       config.token_storage_url = "redis://localhost:6379/0"
-      config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     when :database
       config.token_storage_adapter = :database
       config.token_storage_url = "sqlite3:///:memory:"
-      config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     when :dynamodb
       config.token_storage_adapter = :dynamodb
       config.token_storage_options = {
         table_name: "jdpi_test_tokens",
         region: "us-east-1"
       }
-      config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     else # :memory
       config.token_storage_adapter = :memory
-      config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     end
+    config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
 
     config
   end
@@ -160,38 +157,38 @@ def setup_common_http_stubs
 
   # Create comprehensive stubs that match OAuth requests regardless of host or body format
   # Primary catch-all stub for any OAuth endpoint
-  stub_request(:post, /.*\/auth\/jdpi\/connect\/token/)
+  stub_request(:post, %r{.*/auth/jdpi/connect/token})
     .to_return(
       status: 200,
       body: oauth_response.to_json,
-      headers: { 'Content-Type' => 'application/json' }
+      headers: { "Content-Type" => "application/json" }
     )
 
   # Specific stub for form-encoded requests
-  stub_request(:post, /.*\/auth\/jdpi\/connect\/token/)
-    .with(headers: { 'Content-Type' => 'application/x-www-form-urlencoded' })
+  stub_request(:post, %r{.*/auth/jdpi/connect/token})
+    .with(headers: { "Content-Type" => "application/x-www-form-urlencoded" })
     .to_return(
       status: 200,
       body: oauth_response.to_json,
-      headers: { 'Content-Type' => 'application/json' }
+      headers: { "Content-Type" => "application/json" }
     )
 
   # More specific stubs for various body formats that are appearing in tests
   [
-    'client_id=test_client&client_secret=test_secret&grant_type=client_credentials',
-    'client_id&client_secret&grant_type=client_credentials',
+    "client_id=test_client&client_secret=test_secret&grant_type=client_credentials",
+    "client_id&client_secret&grant_type=client_credentials",
     /client_id.*grant_type.*client_credentials/,
     /grant_type=client_credentials/
   ].each do |body_pattern|
-    stub_request(:post, /.*\/auth\/jdpi\/connect\/token/)
+    stub_request(:post, %r{.*/auth/jdpi/connect/token})
       .with(
-        headers: { 'Content-Type' => 'application/x-www-form-urlencoded' },
+        headers: { "Content-Type" => "application/x-www-form-urlencoded" },
         body: body_pattern
       )
       .to_return(
         status: 200,
         body: oauth_response.to_json,
-        headers: { 'Content-Type' => 'application/json' }
+        headers: { "Content-Type" => "application/json" }
       )
   end
 
@@ -204,7 +201,7 @@ def setup_common_http_stubs
       .to_return(
         status: 200,
         body: oauth_response.to_json,
-        headers: { 'Content-Type' => 'application/json' }
+        headers: { "Content-Type" => "application/json" }
       )
   end
 
@@ -214,7 +211,7 @@ def setup_common_http_stubs
     .to_return(
       status: 200,
       body: oauth_response.to_json,
-      headers: { 'Content-Type' => 'application/json' }
+      headers: { "Content-Type" => "application/json" }
     )
 
   # Additional catch-all for this specific host
@@ -222,60 +219,62 @@ def setup_common_http_stubs
     .to_return(
       status: 200,
       body: oauth_response.to_json,
-      headers: { 'Content-Type' => 'application/json' }
+      headers: { "Content-Type" => "application/json" }
     )
 
   # Stub any other common API endpoints and catch-all patterns
-  stub_request(:get, /.*\/api\/.*/)
-    .to_return(status: 200, body: '{"status": "success"}', headers: { 'Content-Type' => 'application/json' })
+  stub_request(:get, %r{.*/api/.*})
+    .to_return(status: 200, body: '{"status": "success"}', headers: { "Content-Type" => "application/json" })
 
-  stub_request(:post, /.*\/api\/.*/)
-    .to_return(status: 200, body: '{"status": "success"}', headers: { 'Content-Type' => 'application/json' })
+  stub_request(:post, %r{.*/api/.*})
+    .to_return(status: 200, body: '{"status": "success"}', headers: { "Content-Type" => "application/json" })
 
-  stub_request(:put, /.*\/api\/.*/)
-    .to_return(status: 200, body: '{"status": "success"}', headers: { 'Content-Type' => 'application/json' })
+  stub_request(:put, %r{.*/api/.*})
+    .to_return(status: 200, body: '{"status": "success"}', headers: { "Content-Type" => "application/json" })
 
-  stub_request(:delete, /.*\/api\/.*/)
-    .to_return(status: 200, body: '{"status": "success"}', headers: { 'Content-Type' => 'application/json' })
+  stub_request(:delete, %r{.*/api/.*})
+    .to_return(status: 200, body: '{"status": "success"}', headers: { "Content-Type" => "application/json" })
 
   # Catch-all stub for any HTTP method to any URL
   stub_request(:any, /.*/)
-    .to_return(status: 200, body: '{"status": "success"}', headers: { 'Content-Type' => 'application/json' })
+    .to_return(status: 200, body: '{"status": "success"}', headers: { "Content-Type" => "application/json" })
 end
 
-class Minitest::Test
-  include ServiceConfiguration
+module Minitest
+  class Test
+    include ServiceConfiguration
 
-  def setup
-    # Reset configuration for each test to ensure isolation
-    JDPIClient.instance_variable_set(:@config, nil)
+    def setup
+      # Reset configuration for each test to ensure isolation
+      JDPIClient.instance_variable_set(:@config, nil)
 
-    # Set up test configuration based on environment
-    @test_config = create_test_config
-    JDPIClient.instance_variable_set(:@config, @test_config)
+      # Set up test configuration based on environment
+      @test_config = create_test_config
+      JDPIClient.instance_variable_set(:@config, @test_config)
 
-    # Set up HTTP stubs for external requests
-    setup_common_http_stubs
+      # Set up HTTP stubs for external requests
+      setup_common_http_stubs
 
-    # Clean up any existing test data (handled by individual test teardown)
-  end
+      # Clean up any existing test data (handled by individual test teardown)
+    end
 
-  def teardown
-    # Clean up any test artifacts (handled by individual test teardown)
-    JDPIClient.instance_variable_set(:@config, nil)
-    # Reset WebMock stubs
-    WebMock.reset!
-  end
+    def teardown
+      # Clean up any test artifacts (handled by individual test teardown)
+      JDPIClient.instance_variable_set(:@config, nil)
+      # Reset WebMock stubs
+      WebMock.reset!
+    end
 
-  # Helper method to create storage instance for testing
-  def create_storage(adapter_type = nil)
-    config = create_test_config(adapter_type)
-    JDPIClient::TokenStorage::Factory.create(config)
-  end
+    # Helper method to create storage instance for testing
+    def create_storage(adapter_type = nil)
+      config = create_test_config(adapter_type)
+      JDPIClient::TokenStorage::Factory.create(config)
+    end
 
-  # Helper method to skip tests based on service availability
-  def skip_unless_available(service)
-    skip_unless_service_available(service)
+    # Helper method to skip tests based on service availability
+    def skip_unless_available(service)
+      skip_unless_service_available(service)
+    end
   end
 end
 
@@ -283,14 +282,15 @@ end
 module TestHelpers
   # Debug logging helper for tests
   def debug_log(message)
-    return unless ENV['DEBUG'] || ENV['VERBOSE']
+    return unless ENV["DEBUG"] || ENV["VERBOSE"]
 
     if defined?(JDPIClient.config) && JDPIClient.config&.logger
       JDPIClient.config.logger.debug(message)
-    elsif ENV['DEBUG']
-      $stderr.puts("[DEBUG] #{message}")
+    elsif ENV["DEBUG"]
+      warn("[DEBUG] #{message}")
     end
   end
+
   def mock_successful_response(data = {})
     {
       "status" => "success",

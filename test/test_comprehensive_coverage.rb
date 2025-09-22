@@ -1,6 +1,8 @@
-require 'test_helper'
-require 'logger'
-require 'stringio'
+# frozen_string_literal: true
+
+require "test_helper"
+require "logger"
+require "stringio"
 
 class TestComprehensiveCoverage < Minitest::Test
   def setup
@@ -82,7 +84,7 @@ class TestComprehensiveCoverage < Minitest::Test
     assert_equal JDPIClient::Errors::Error, JDPIClient::Errors::Validation.superclass
 
     # Test error factory method
-    error400 = JDPIClient::Errors.from_response(400, {"message" => "Bad Request"})
+    error400 = JDPIClient::Errors.from_response(400, { "message" => "Bad Request" })
     assert_instance_of JDPIClient::Errors::Validation, error400
     assert_equal "Bad Request", error400.message
 
@@ -191,7 +193,7 @@ class TestComprehensiveCoverage < Minitest::Test
       unknown_config.token_storage_adapter = :unknown
       factory.create(unknown_config)
     end
-    assert_includes error.message, "Unknown storage adapter"
+    assert_includes error.message, "Unknown token storage adapter"
 
     # Test adapter info
     info = factory.adapter_info
@@ -215,7 +217,7 @@ class TestComprehensiveCoverage < Minitest::Test
       "boolean" => true,
       "null" => nil,
       "array" => [1, 2, 3],
-      "nested" => {"key" => "value"}
+      "nested" => { "key" => "value" }
     }
 
     encrypted = encryption.encrypt(complex_data, valid_key)
@@ -229,7 +231,7 @@ class TestComprehensiveCoverage < Minitest::Test
     end
 
     # Test decrypt with invalid data structure
-    invalid_data = {encrypted: true, version: 1}
+    invalid_data = { encrypted: true, version: 1 }
     assert_raises(JDPIClient::Errors::ConfigurationError) do
       encryption.decrypt(invalid_data, valid_key)
     end
@@ -246,7 +248,7 @@ class TestComprehensiveCoverage < Minitest::Test
     storage = JDPIClient::TokenStorage::Memory.new(@config)
 
     # Test store with TTL of 0 (immediate expiration)
-    storage.store("expire_now", {"token" => "test"}, 0)
+    storage.store("expire_now", { "token" => "test" }, 0)
     sleep(0.01)
     assert_nil storage.retrieve("expire_now")
 
@@ -257,12 +259,12 @@ class TestComprehensiveCoverage < Minitest::Test
     @config.logger = logger
 
     storage = JDPIClient::TokenStorage::Memory.new(@config)
-    storage.store("key1", {"token" => "test"}, 3600)
-    storage.store("key2", {"token" => "test"}, 3600)
+    storage.store("key1", { "token" => "test" }, 3600)
+    storage.store("key2", { "token" => "test" }, 3600)
 
     # Should only have one warning
     log_content = log_output.string
-    warning_count = log_content.scan(/WARN/).length
+    warning_count = log_content.scan("WARN").length
     assert_equal 1, warning_count
   end
 
@@ -294,7 +296,7 @@ class TestComprehensiveCoverage < Minitest::Test
     assert_includes error.message, "DynamoDB table name is required"
 
     # Test DynamoDB with nil table name
-    config.token_storage_options = {table_name: nil}
+    config.token_storage_options = { table_name: nil }
     error = assert_raises(JDPIClient::Errors::ConfigurationError) do
       config.validate_token_storage_config!
     end

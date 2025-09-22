@@ -4,7 +4,7 @@ require_relative "test_helper"
 
 class TestConfig < Minitest::Test
   def setup
-    super  # Important: Call parent setup for WebMock stubs
+    super # Important: Call parent setup for WebMock stubs
 
     @config = JDPIClient::Config.new
   end
@@ -126,7 +126,7 @@ class TestConfig < Minitest::Test
     # Test that base_url returns proper URL format
     @config.jdpi_client_host = "api.test.com"
     base_url = @config.base_url
-    assert base_url.match?(/^https?:\/\/.+/), "Base URL should be a valid URL format"
+    assert base_url.match?(%r{^https?://.+}), "Base URL should be a valid URL format"
   end
 
   def test_config_attribute_assignment

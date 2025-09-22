@@ -43,7 +43,7 @@ module JDPIClient
         end
 
         true
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "store token")
         false
       end
@@ -73,7 +73,7 @@ module JDPIClient
         end
 
         decrypt_if_enabled(token_data)
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "retrieve token")
         nil
       end
@@ -94,7 +94,7 @@ module JDPIClient
           )
           !result.empty?
         end
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "check token existence")
         false
       end
@@ -103,15 +103,15 @@ module JDPIClient
       # @param key [String] The cache key for the token
       def delete(key)
         if active_record_available?
-          token_model.where(token_key: key).delete_all > 0
+          token_model.where(token_key: key).delete_all.positive?
         else
           @connection.execute(
             "DELETE FROM #{@table_name} WHERE token_key = ?",
             [key]
           )
-          @connection.changes > 0 # SQLite syntax, may vary by database
+          @connection.changes.positive? # SQLite syntax, may vary by database
         end
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "delete token")
         false
       end
@@ -130,7 +130,7 @@ module JDPIClient
         end
 
         true
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "clear all tokens")
         false
       end
@@ -144,7 +144,7 @@ module JDPIClient
           @connection.execute("SELECT 1")
         end
         true
-      rescue
+      rescue StandardError
         false
       end
 
@@ -164,7 +164,7 @@ module JDPIClient
         end
 
         deleted_count
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "cleanup expired tokens")
         0
       end
@@ -182,7 +182,7 @@ module JDPIClient
         else
           acquire_lock_with_raw_sql(lock_key, lock_expires_at)
         end
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "acquire lock")
         false
       end
@@ -229,7 +229,6 @@ module JDPIClient
         if active_record_available?
           total_count = token_model.count
           expired_count = token_model.where("expires_at <= ?", Time.now).count
-          active_count = total_count - expired_count
         else
           total_result = @connection.execute("SELECT COUNT(*) FROM #{@table_name}")
           expired_result = @connection.execute(
@@ -240,8 +239,8 @@ module JDPIClient
           # Handle both hash and array result formats
           total_count = total_result.first.is_a?(Hash) ? total_result.first["COUNT(*)"] : total_result.first[0]
           expired_count = expired_result.first.is_a?(Hash) ? expired_result.first["COUNT(*)"] : expired_result.first[0]
-          active_count = total_count - expired_count
         end
+        active_count = total_count - expired_count
 
         {
           table_name: @table_name,
@@ -251,7 +250,7 @@ module JDPIClient
           encryption_enabled: @config.token_encryption_enabled?,
           database_adapter: database_adapter_name
         }
-      rescue => e
+      rescue StandardError => e
         handle_database_error(e, "get stats")
         { error: e.message }
       end
@@ -267,7 +266,7 @@ module JDPIClient
           # Fall back to SQLite for simple cases
           establish_sqlite_connection
         end
-      rescue => e
+      rescue StandardError => e
         raise JDPIClient::Errors::ConfigurationError,
               "Database connection error: #{e.message}"
       end
@@ -455,9 +454,7 @@ module JDPIClient
       def handle_database_error(error, operation)
         error_message = "Database #{operation} failed: #{error.message}"
 
-        if @config.logger
-          @config.logger.error(error_message)
-        end
+        @config.logger&.error(error_message)
 
         # Re-raise as appropriate JDPI client error
         connection_errors = connection_error_classes
