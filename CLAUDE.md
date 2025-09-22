@@ -124,6 +124,12 @@ bundle exec rubocop
 # Run tests
 bundle exec rake test
 
+# Run tests with coverage
+COVERAGE=true bundle exec rake test
+
+# Run full CI suite (tests + coverage + linting)
+bundle exec rake ci
+
 # Build gem
 gem build jdpi_client.gemspec
 
@@ -173,4 +179,6 @@ end
 - All HTTP operations include retry logic and proper error handling
 - Thread-safe token management with MonitorMixin
 - Comprehensive test coverage with minitest
-- CI/CD pipeline tests multiple Ruby versions (3.0-3.3)
+- CI/CD pipeline tests multiple Ruby versions (3.0-3.4)
+- Current test coverage: 75.65% line coverage, 53.07% branch coverage
+- Test suite: 330 runs, 1869 assertions across all supported Ruby versions

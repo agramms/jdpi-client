@@ -403,4 +403,200 @@ class TestPixPaymentService < Minitest::Test
 end
 ```
 
-This comprehensive documentation provides Claude with practical, copy-paste examples for common JDPI integration scenarios.
+## 📊 Performance Monitoring Example
+
+```ruby
+class JDPIMetricsCollector
+  def initialize
+    @metrics = []
+  end
+
+  def track_request(operation, &block)
+    start_time = Time.now
+
+    begin
+      result = block.call
+      duration = Time.now - start_time
+
+      log_success_metric(operation, duration)
+      result
+
+    rescue => e
+      duration = Time.now - start_time
+      log_error_metric(operation, duration, e)
+      raise e
+    end
+  end
+
+  private
+
+  def log_success_metric(operation, duration)
+    Rails.logger.info "JDPI Operation Success", {
+      operation: operation,
+      duration_ms: (duration * 1000).round(2),
+      status: 'success',
+      timestamp: Time.now.utc.iso8601
+    }
+  end
+
+  def log_error_metric(operation, duration, error)
+    Rails.logger.error "JDPI Operation Failed", {
+      operation: operation,
+      duration_ms: (duration * 1000).round(2),
+      error_class: error.class.name,
+      error_message: error.message,
+      status: 'error',
+      timestamp: Time.now.utc.iso8601
+    }
+  end
+end
+
+# Usage with existing services
+metrics = JDPIMetricsCollector.new
+
+# Track payment operations
+payment_result = metrics.track_request('spi.create_order') do
+  spi_client.create_order!(payment_data)
+end
+
+# Track DICT operations
+key_result = metrics.track_request('dict.register_key') do
+  dict_client.create_key!(key_data)
+end
+```
+
+## 🔄 Rate Limiting Implementation
+
+```ruby
+class JDPIRateLimitManager
+  def initialize(redis: Redis.current)
+    @redis = redis
+  end
+
+  def with_rate_limit(operation:, limit: 90, window: 60, &block)
+    key = "jdpi:rate_limit:#{operation}:#{Time.now.to_i / window}"
+
+    current_requests = @redis.incr(key)
+    @redis.expire(key, window) if current_requests == 1
+
+    if current_requests > limit
+      wait_time = window - (Time.now.to_i % window)
+      raise JDPIClient::Errors::RateLimited.new(
+        "Rate limit exceeded. Retry in #{wait_time} seconds"
+      )
+    end
+
+    block.call
+  end
+end
+
+# Usage
+rate_limiter = JDPIRateLimitManager.new
+
+rate_limiter.with_rate_limit(operation: 'spi_payments', limit: 90) do
+  spi_client.create_order!(payment_data)
+end
+```
+
+## 🔧 Environment-Specific Configuration
+
+```ruby
+# config/environments/production.rb
+Rails.application.configure do
+  config.after_initialize do
+    JDPIClient.configure do |jdpi_config|
+      jdpi_config.jdpi_client_host = ENV.fetch('JDPI_CLIENT_HOST')
+      jdpi_config.oauth_client_id = ENV.fetch('JDPI_CLIENT_ID')
+      jdpi_config.oauth_secret = ENV.fetch('JDPI_CLIENT_SECRET')
+
+      # Production-specific settings
+      jdpi_config.timeout = 8
+      jdpi_config.open_timeout = 3
+      jdpi_config.logger = Rails.logger
+      jdpi_config.logger.level = Logger::WARN  # Minimal logging
+
+      # Encrypted token storage with Redis
+      jdpi_config.token_storage_adapter = :redis
+      jdpi_config.token_storage_url = ENV.fetch('REDIS_URL')
+      jdpi_config.token_encryption_enabled = true
+      jdpi_config.token_encryption_key = ENV.fetch('JDPI_TOKEN_ENCRYPTION_KEY')
+      jdpi_config.token_storage_key_prefix = "production:jdpi"
+    end
+  end
+end
+
+# config/environments/development.rb
+Rails.application.configure do
+  config.after_initialize do
+    JDPIClient.configure do |jdpi_config|
+      jdpi_config.jdpi_client_host = 'api.test.homl.jdpi.pstijd'
+      jdpi_config.oauth_client_id = ENV['JDPI_CLIENT_ID'] || 'dev_client'
+      jdpi_config.oauth_secret = ENV['JDPI_CLIENT_SECRET'] || 'dev_secret'
+
+      # Development-specific settings
+      jdpi_config.timeout = 15  # Longer timeout for debugging
+      jdpi_config.logger = Logger.new($stdout)
+      jdpi_config.logger.level = Logger::DEBUG  # Verbose logging
+
+      # Simple memory storage for development
+      jdpi_config.token_storage_adapter = :memory
+    end
+  end
+end
+```
+
+## 🧪 Testing Best Practices
+
+### Integration Test Setup
+```ruby
+# test/integration/test_pix_integration.rb
+require_relative '../test_helper'
+
+class TestPixIntegration < Minitest::Test
+  def setup
+    # Use test configuration
+    @config = ServiceConfiguration.create_test_config(:memory)
+    JDPIClient.instance_variable_set(:@config, @config)
+
+    # Set up HTTP stubs
+    setup_common_http_stubs
+  end
+
+  def test_complete_payment_flow
+    # Test the full payment flow
+    auth_client = JDPIClient::Auth::Client.new
+    token = auth_client.token!
+    assert token
+
+    spi_client = JDPIClient::SPI::OP.new
+    response = spi_client.create_order!(
+      valor: 1000,
+      chave: "test@example.com",
+      dt_hr_requisicao_psp: Time.now.utc.iso8601,
+      idempotency_key: SecureRandom.uuid
+    )
+
+    assert response['id_req']
+    assert_equal 'ACSP', response['status']
+  end
+
+  def test_error_handling
+    # Test error scenarios
+    spi_client = JDPIClient::SPI::OP.new
+
+    assert_raises JDPIClient::Errors::Validation do
+      spi_client.create_order!(valor: -100)  # Invalid amount
+    end
+  end
+end
+```
+
+## 📈 Current Metrics & Coverage
+
+- **Test Coverage**: 75.65% line coverage, 53.07% branch coverage
+- **Test Suite**: 330 runs, 1869 assertions
+- **Ruby Support**: 3.0, 3.1, 3.2, 3.3, 3.4
+- **CI/CD**: GitHub Actions with multi-version matrix testing
+- **Performance**: Sub-500ms response times for most operations
+
+This comprehensive documentation provides Claude with practical, copy-paste examples for common JDPI integration scenarios, updated with current metrics and best practices.

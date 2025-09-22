@@ -29,12 +29,26 @@ EOF
 # Run tests to ensure everything works
 bundle exec rake test
 
+# Run tests with coverage
+COVERAGE=true bundle exec rake test
+
 # Check linting
 bundle exec rubocop
+
+# Run full CI suite locally
+bundle exec rake ci
 
 # Build gem to verify structure
 gem build jdpi_client.gemspec
 ```
+
+## 📊 Current Project Metrics
+
+- **Test Coverage**: 75.65% line coverage, 53.07% branch coverage
+- **Test Suite**: 330 runs, 1869 assertions
+- **Ruby Support**: 3.0, 3.1, 3.2, 3.3, 3.4
+- **CI/CD**: GitHub Actions with multi-version matrix testing
+- **Coverage Thresholds**: 70% line coverage minimum, 25% per-file minimum
 
 ## 🧪 Test-Driven Development
 
