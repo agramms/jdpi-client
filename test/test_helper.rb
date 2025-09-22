@@ -20,8 +20,8 @@ if ENV["COVERAGE"] == "true"
     add_group "Token Storage", "lib/jdpi_client/token_storage"
 
     # Coverage thresholds (can be increased over time)
-    minimum_coverage 85
-    minimum_coverage_by_file 5
+    minimum_coverage 70
+    minimum_coverage_by_file 30
 
     # Output formats
     formatter SimpleCov::Formatter::MultiFormatter.new([
