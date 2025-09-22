@@ -64,7 +64,7 @@ class TestTokenStorageIntegration < Minitest::Test
     encrypted = JDPIClient::TokenStorage::Encryption.encrypt(data, encryption_key)
     assert encrypted[:encrypted]
     assert_equal 1, encrypted[:version]
-    assert encrypted[:data]
+    assert encrypted[:ciphertext]
 
     decrypted = JDPIClient::TokenStorage::Encryption.decrypt(encrypted, encryption_key)
     assert_equal data, decrypted

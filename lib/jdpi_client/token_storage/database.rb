@@ -393,6 +393,24 @@ module JDPIClient
         end
       end
 
+      # Get connection error classes that might be available
+      def connection_error_classes
+        classes = []
+        classes << ActiveRecord::ConnectionNotEstablished if defined?(ActiveRecord::ConnectionNotEstablished)
+        classes << SQLite3::BusyException if defined?(SQLite3::BusyException)
+        classes << PG::ConnectionBad if defined?(PG::ConnectionBad)
+        classes
+      end
+
+      # Get constraint error classes that might be available
+      def constraint_error_classes
+        classes = []
+        classes << ActiveRecord::RecordNotUnique if defined?(ActiveRecord::RecordNotUnique)
+        classes << SQLite3::ConstraintException if defined?(SQLite3::ConstraintException)
+        classes << PG::UniqueViolation if defined?(PG::UniqueViolation)
+        classes
+      end
+
       # Handle database errors consistently
       # @param error [Exception] The error that occurred
       # @param operation [String] Description of the operation
@@ -404,10 +422,12 @@ module JDPIClient
         end
 
         # Re-raise as appropriate JDPI client error
-        case error
-        when ActiveRecord::ConnectionNotEstablished, SQLite3::BusyException
+        connection_errors = connection_error_classes
+        constraint_errors = constraint_error_classes
+
+        if connection_errors.any? { |klass| error.is_a?(klass) }
           raise JDPIClient::Errors::ServerError, "Database connection lost during #{operation}"
-        when ActiveRecord::RecordNotUnique, SQLite3::ConstraintException
+        elsif constraint_errors.any? { |klass| error.is_a?(klass) }
           # This is expected for lock contention
           raise error
         else

@@ -24,6 +24,17 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rubocop", ">= 1.0"
   spec.add_development_dependency "simplecov", ">= 0.22"
 
+  # Mocking dependencies for tests
+  spec.add_development_dependency "mock_redis", ">= 0.17"
+  spec.add_development_dependency "webmock", ">= 3.0"
+
+  # Optional dependencies for token storage backends (dev/test only)
+  spec.add_development_dependency "redis", ">= 4.0"
+  spec.add_development_dependency "aws-sdk-dynamodb", ">= 1.0"
+  spec.add_development_dependency "pg", ">= 1.0"
+  spec.add_development_dependency "sqlite3", ">= 1.4"
+  spec.add_development_dependency "activerecord", ">= 6.0"
+
   # Optional dependencies for token storage backends
   # Note: These are optional and only required when using specific storage adapters
   spec.metadata["rubygems_mfa_required"] = "true"

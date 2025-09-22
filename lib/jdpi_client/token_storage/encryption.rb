@@ -108,6 +108,26 @@ module JDPIClient
           Base64.strict_encode64(SecureRandom.bytes(32))
         end
 
+        # Validate if a key is in the correct format for encryption
+        # @param key [String] Key to validate
+        # @return [Boolean] True if key is valid Base64-encoded 32-byte key
+        def valid_key?(key)
+          return false unless key.is_a?(String)
+          return false if key.empty?
+
+          begin
+            # Should be 44 characters (32 bytes * 4/3 Base64 ratio)
+            return false unless key.length == 44
+
+            # Should be valid Base64 and decode to exactly 32 bytes
+            decoded = Base64.strict_decode64(key)
+            decoded.length == 32
+          rescue ArgumentError
+            # Invalid Base64
+            false
+          end
+        end
+
         private
 
         # Derive an encryption key using PBKDF2

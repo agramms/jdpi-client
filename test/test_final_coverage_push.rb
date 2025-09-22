@@ -176,7 +176,9 @@ class TestFinalCoveragePush < Minitest::Test
     end
   end
 
-  def test_parse_json_scenarios(http)
+  def test_parse_json_scenarios
+    http = JDPIClient::HTTP::Client.new(@config, nil)
+
     # All parse_json scenarios
     scenarios = [
       [nil, {}],
@@ -247,7 +249,9 @@ class TestFinalCoveragePush < Minitest::Test
     assert_equal expected_params, params
   end
 
-  def test_token_valid_scenarios(auth_client)
+  def test_token_valid_scenarios
+    auth_client = JDPIClient::Auth::Client.new(@config)
+
     scenarios = [
       # Valid token
       [{
@@ -304,7 +308,7 @@ class TestFinalCoveragePush < Minitest::Test
     test_config_boolean_helpers(config)
   end
 
-  def test_base_url_edge_cases(config)
+  def test_base_url_edge_cases
     test_cases = [
       # Production hosts (should use HTTPS)
       ["api.production.jdpi.pstijd", "https://api.production.jdpi.pstijd"],
@@ -327,13 +331,13 @@ class TestFinalCoveragePush < Minitest::Test
     ]
 
     test_cases.each do |host, expected_url|
-      config.jdpi_client_host = host
-      actual_url = config.base_url
+      @config.jdpi_client_host = host
+      actual_url = @config.base_url
       assert_equal expected_url, actual_url, "Failed for host: #{host}"
     end
   end
 
-  def test_production_detection_edge_cases(config)
+  def test_production_detection_edge_cases
     production_patterns = [
       "api.production.jdpi.pstijd",
       "prod.api.jdpi.pstijd",
@@ -358,42 +362,42 @@ class TestFinalCoveragePush < Minitest::Test
     ]
 
     production_patterns.each do |host|
-      config.jdpi_client_host = host
-      assert config.production?, "#{host} should be detected as production"
-      assert_equal "prod", config.environment
+      @config.jdpi_client_host = host
+      assert @config.production?, "#{host} should be detected as production"
+      assert_equal "prod", @config.environment
     end
 
     non_production_patterns.each do |host|
-      config.jdpi_client_host = host
-      refute config.production?, "#{host} should not be detected as production"
-      assert_equal "homl", config.environment
+      @config.jdpi_client_host = host
+      refute @config.production?, "#{host} should not be detected as production"
+      assert_equal "homl", @config.environment
     end
   end
 
-  def test_config_boolean_helpers(config)
+  def test_config_boolean_helpers
     # Test token_encryption_enabled?
-    refute config.token_encryption_enabled?
+    refute @config.token_encryption_enabled?
 
-    config.token_encryption_key = ""
-    refute config.token_encryption_enabled?
+    @config.token_encryption_key = ""
+    refute @config.token_encryption_enabled?
 
-    config.token_encryption_key = nil
-    refute config.token_encryption_enabled?
+    @config.token_encryption_key = nil
+    refute @config.token_encryption_enabled?
 
-    config.token_encryption_key = "valid_key"
-    assert config.token_encryption_enabled?
+    @config.token_encryption_key = "valid_key"
+    assert @config.token_encryption_enabled?
 
     # Test shared_token_storage?
-    config.token_storage_adapter = :memory
-    refute config.shared_token_storage?
+    @config.token_storage_adapter = :memory
+    refute @config.shared_token_storage?
 
     [:redis, :dynamodb, :database].each do |adapter|
-      config.token_storage_adapter = adapter
-      assert config.shared_token_storage?, "#{adapter} should be considered shared storage"
+      @config.token_storage_adapter = adapter
+      assert @config.shared_token_storage?, "#{adapter} should be considered shared storage"
     end
 
-    config.token_storage_adapter = :unknown
-    refute config.shared_token_storage?
+    @config.token_storage_adapter = :unknown
+    refute @config.shared_token_storage?
   end
 
   # Test all encryption edge cases
@@ -448,7 +452,8 @@ class TestFinalCoveragePush < Minitest::Test
     test_encryption_errors(key)
   end
 
-  def test_encryption_errors(valid_key)
+  def test_encryption_errors
+    valid_key = JDPIClient::TokenStorage::Encryption.generate_key
     test_data = {"test" => "data"}
 
     # Test invalid keys
@@ -537,7 +542,9 @@ class TestFinalCoveragePush < Minitest::Test
     refute storage.exists?("short_ttl")
   end
 
-  def test_cleanup_scenarios(storage)
+  def test_cleanup_scenarios
+    storage = JDPIClient::TokenStorage::Memory.new(@config)
+
     # Add some tokens with different expiry times
     storage.store("valid_1", {"data" => "1"}, 3600)
     storage.store("valid_2", {"data" => "2"}, 7200)

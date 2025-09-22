@@ -10,9 +10,53 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
+    activemodel (8.0.2.1)
+      activesupport (= 8.0.2.1)
+    activerecord (8.0.2.1)
+      activemodel (= 8.0.2.1)
+      activesupport (= 8.0.2.1)
+      timeout (>= 0.4.0)
+    activesupport (8.0.2.1)
+      base64
+      benchmark (>= 0.3)
+      bigdecimal
+      concurrent-ruby (~> 1.0, >= 1.3.1)
+      connection_pool (>= 2.2.5)
+      drb
+      i18n (>= 1.6, < 2)
+      logger (>= 1.4.2)
+      minitest (>= 5.1)
+      securerandom (>= 0.3)
+      tzinfo (~> 2.0, >= 2.0.5)
+      uri (>= 0.13.1)
+    addressable (2.8.7)
+      public_suffix (>= 2.0.2, < 7.0)
     ast (2.4.3)
+    aws-eventstream (1.4.0)
+    aws-partitions (1.1162.0)
+    aws-sdk-core (3.232.0)
+      aws-eventstream (~> 1, >= 1.3.0)
+      aws-partitions (~> 1, >= 1.992.0)
+      aws-sigv4 (~> 1.9)
+      base64
+      bigdecimal
+      jmespath (~> 1, >= 1.6.1)
+      logger
+    aws-sdk-dynamodb (1.153.0)
+      aws-sdk-core (~> 3, >= 3.231.0)
+      aws-sigv4 (~> 1.5)
+    aws-sigv4 (1.12.1)
+      aws-eventstream (~> 1, >= 1.0.2)
     base64 (0.3.0)
+    benchmark (0.4.1)
+    bigdecimal (3.2.3)
+    concurrent-ruby (1.3.5)
+    connection_pool (2.5.4)
+    crack (1.0.0)
+      bigdecimal
+      rexml
     docile (1.4.1)
+    drb (2.2.3)
     faraday (2.13.4)
       faraday-net_http (>= 2.0, < 3.5)
       json
@@ -21,11 +65,17 @@ GEM
       net-http (>= 0.5.0)
     faraday-retry (2.3.2)
       faraday (~> 2.0)
+    hashdiff (1.2.1)
+    i18n (1.14.7)
+      concurrent-ruby (~> 1.0)
+    jmespath (1.6.2)
     json (2.14.1)
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     logger (1.7.0)
     minitest (5.25.5)
+    mock_redis (0.52.0)
+      redis (~> 5)
     multi_json (1.17.0)
     net-http (0.6.0)
       uri
@@ -33,11 +83,18 @@ GEM
     parser (3.3.9.0)
       ast (~> 2.4.1)
       racc
+    pg (1.6.2-arm64-darwin)
     prism (1.5.1)
+    public_suffix (6.0.2)
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.0)
+    redis (5.4.1)
+      redis-client (>= 0.22.0)
+    redis-client (0.25.3)
+      connection_pool
     regexp_parser (2.11.3)
+    rexml (3.4.4)
     rubocop (1.80.2)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
@@ -53,27 +110,42 @@ GEM
       parser (>= 3.3.7.2)
       prism (~> 1.4)
     ruby-progressbar (1.13.0)
+    securerandom (0.4.1)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
+    sqlite3 (2.7.4-arm64-darwin)
+    timeout (0.4.3)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.1.0)
     uri (1.0.3)
+    webmock (3.25.1)
+      addressable (>= 2.8.0)
+      crack (>= 0.3.2)
+      hashdiff (>= 0.4.0, < 2.0.0)
 
 PLATFORMS
   arm64-darwin-24
-  ruby
 
 DEPENDENCIES
+  activerecord (>= 6.0)
+  aws-sdk-dynamodb (>= 1.0)
   jdpi_client!
   minitest (>= 5.0)
+  mock_redis (>= 0.17)
+  pg (>= 1.0)
   rake (>= 13.0)
+  redis (>= 4.0)
   rubocop (>= 1.0)
   simplecov (>= 0.22)
+  sqlite3 (>= 1.4)
+  webmock (>= 3.0)
 
 BUNDLED WITH
    2.7.1
