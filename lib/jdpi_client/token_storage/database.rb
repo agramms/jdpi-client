@@ -31,9 +31,9 @@ module JDPIClient
         token_record = {
           token_key: key,
           token_data: MultiJson.dump(data_to_store),
-          expires_at: expires_at,
-          created_at: Time.now,
-          updated_at: Time.now
+          expires_at: expires_at.utc.iso8601,
+          created_at: Time.now.utc.iso8601,
+          updated_at: Time.now.utc.iso8601
         }
 
         if active_record_available?
@@ -63,11 +63,13 @@ module JDPIClient
           result = @connection.execute(
             "SELECT token_data FROM #{@table_name} " \
             "WHERE token_key = ? AND expires_at > ?",
-            [key, Time.now]
+            [key, Time.now.utc.iso8601]
           )
           return nil if result.empty?
 
-          token_data = MultiJson.load(result.first["token_data"] || result.first[0])
+          # Handle both hash and array result formats
+          raw_data = result.first.is_a?(Hash) ? result.first["token_data"] : result.first[0]
+          token_data = MultiJson.load(raw_data)
         end
 
         decrypt_if_enabled(token_data)
@@ -88,7 +90,7 @@ module JDPIClient
           result = @connection.execute(
             "SELECT 1 FROM #{@table_name} " \
             "WHERE token_key = ? AND expires_at > ? LIMIT 1",
-            [key, Time.now]
+            [key, Time.now.utc.iso8601]
           )
           !result.empty?
         end
@@ -103,7 +105,7 @@ module JDPIClient
         if active_record_available?
           token_model.where(token_key: key).delete_all > 0
         else
-          result = @connection.execute(
+          @connection.execute(
             "DELETE FROM #{@table_name} WHERE token_key = ?",
             [key]
           )
@@ -156,7 +158,7 @@ module JDPIClient
         else
           @connection.execute(
             "DELETE FROM #{@table_name} WHERE expires_at <= ?",
-            [Time.now]
+            [Time.now.utc.iso8601]
           )
           deleted_count = @connection.changes
         end
@@ -195,6 +197,32 @@ module JDPIClient
         success
       end
 
+      # Execute a block with a distributed lock
+      # @param key [String] The lock key
+      # @param ttl [Integer] Lock expiration time in seconds
+      # @yield Block to execute with lock
+      def with_lock(key, ttl = LOCK_TIMEOUT)
+        retries = 0
+        max_retries = 30 # 3 seconds with 0.1s sleep
+
+        loop do
+          if acquire_lock(key, ttl)
+            begin
+              return yield
+            ensure
+              release_lock
+            end
+          end
+
+          retries += 1
+          if retries >= max_retries
+            raise JDPIClient::Errors::ServerError, "Could not acquire database lock after #{max_retries} retries"
+          end
+
+          sleep(0.1)
+        end
+      end
+
       # Get database storage statistics
       # @return [Hash] Storage statistics
       def stats
@@ -206,11 +234,12 @@ module JDPIClient
           total_result = @connection.execute("SELECT COUNT(*) FROM #{@table_name}")
           expired_result = @connection.execute(
             "SELECT COUNT(*) FROM #{@table_name} WHERE expires_at <= ?",
-            [Time.now]
+            [Time.now.utc.iso8601]
           )
 
-          total_count = total_result.first["COUNT(*)"] || total_result.first[0]
-          expired_count = expired_result.first["COUNT(*)"] || expired_result.first[0]
+          # Handle both hash and array result formats
+          total_count = total_result.first.is_a?(Hash) ? total_result.first["COUNT(*)"] : total_result.first[0]
+          expired_count = expired_result.first.is_a?(Hash) ? expired_result.first["COUNT(*)"] : expired_result.first[0]
           active_count = total_count - expired_count
         end
 
@@ -259,8 +288,17 @@ module JDPIClient
                 "Add 'gem \"sqlite3\"' to your Gemfile or configure ActiveRecord."
         end
 
-        db_path = @config.token_storage_options[:database_path] || "jdpi_tokens.db"
-        SQLite3::Database.new(db_path)
+        # Handle different URL formats
+        if @config.token_storage_url&.start_with?("sqlite3://")
+          # Parse sqlite3:// URLs
+          path = @config.token_storage_url.sub("sqlite3://", "")
+          path = ":memory:" if path.empty? || path == "/:memory:"
+          SQLite3::Database.new(path)
+        else
+          # Use configured path or default file
+          db_path = @config.token_storage_options[:database_path] || "jdpi_tokens.db"
+          SQLite3::Database.new(db_path)
+        end
       end
 
       # Get ActiveRecord model for token storage
@@ -346,8 +384,8 @@ module JDPIClient
             token_key: lock_key,
             token_data: MultiJson.dump({ lock: true }),
             expires_at: lock_expires_at,
-            created_at: Time.now,
-            updated_at: Time.now
+            created_at: Time.now.utc.iso8601,
+            updated_at: Time.now.utc.iso8601
           }
 
           if existing_lock
@@ -366,12 +404,12 @@ module JDPIClient
         # Clean up expired lock first
         @connection.execute(
           "DELETE FROM #{@table_name} WHERE token_key = ? AND expires_at <= ?",
-          [lock_key, Time.now]
+          [lock_key, Time.now.utc.iso8601]
         )
 
         # Try to insert new lock
         begin
-          @connection.execute(<<~SQL, [lock_key, MultiJson.dump({ lock: true }), lock_expires_at, Time.now, Time.now])
+          @connection.execute(<<~SQL, [lock_key, MultiJson.dump({ lock: true }), lock_expires_at.utc.iso8601, Time.now.utc.iso8601, Time.now.utc.iso8601])
             INSERT INTO #{@table_name}
             (token_key, token_data, expires_at, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)

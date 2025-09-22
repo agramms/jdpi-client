@@ -66,12 +66,15 @@ resp  = JDPIClient::SPI::OP.new.create_order!(
 ## Features
 
 - 🔐 **Automatic OAuth2 token management** with thread-safe caching
+- 🏢 **Multi-backend token storage** (Memory, Redis, Database, DynamoDB)
+- 🔒 **Token encryption** for sensitive data protection
 - 🌐 **Environment auto-detection** from hostname (prod/homl)
 - 🔄 **Built-in retry logic** with exponential backoff
 - 🛡️ **Comprehensive error handling** with structured exceptions
 - 🔑 **Idempotency support** for safe payment operations
+- ⚡ **Distributed locking** for clustered environments
 - 📝 **Request/response logging** for debugging
-- ⚡ **No Rails dependency** - works with any Ruby application
+- 🚀 **No Rails dependency** - works with any Ruby application
 - 🧪 **High test coverage** (94.1%) with comprehensive test suite
 
 ## Services Supported
@@ -106,10 +109,158 @@ JDPIClient.configure do |config|
   config.timeout = 10        # Request timeout in seconds
   config.open_timeout = 3    # Connection timeout in seconds
   config.logger = Rails.logger if defined?(Rails)
+
+  # Token storage configuration (for clustered environments)
+  config.token_storage_adapter = :memory  # Default: in-memory storage
+  config.token_storage_key_prefix = 'jdpi_client'  # Cache key prefix
+  config.token_encryption_enabled = true  # Encrypt sensitive tokens
+  config.token_encryption_key = ENV['JDPI_TOKEN_ENCRYPTION_KEY']  # 32+ character key
+end
+```
+
+### Token Storage Configuration
+
+The gem supports multiple token storage backends for clustered and distributed environments:
+
+#### Memory Storage (Default)
+```ruby
+config.token_storage_adapter = :memory
+# ✅ Fast and simple
+# ❌ Not shared between processes/servers
+# 👍 Best for: Single-server applications, development
+```
+
+#### Redis Storage
+```ruby
+config.token_storage_adapter = :redis
+config.token_storage_url = ENV['REDIS_URL'] || 'redis://localhost:6379/0'
+config.token_storage_options = {
+  timeout: 5,
+  reconnect_attempts: 3,
+  reconnect_delay: 1
+}
+# ✅ Distributed caching with automatic expiration
+# ✅ High performance with built-in clustering
+# 👍 Best for: Production clustered environments
+```
+
+#### Database Storage
+```ruby
+config.token_storage_adapter = :database
+config.token_storage_url = ENV['DATABASE_URL']  # Any database supported by Ruby
+config.token_storage_options = {
+  table_name: 'jdpi_client_tokens'  # Custom table name
+}
+# ✅ Persistent storage with transaction safety
+# ✅ Works with existing database infrastructure
+# 👍 Best for: Applications with existing database setup
+```
+
+#### DynamoDB Storage
+```ruby
+config.token_storage_adapter = :dynamodb
+config.token_storage_options = {
+  table_name: 'jdpi-tokens',
+  region: 'us-east-1',
+  access_key_id: ENV['AWS_ACCESS_KEY_ID'],      # Optional if using IAM roles
+  secret_access_key: ENV['AWS_SECRET_ACCESS_KEY'] # Optional if using IAM roles
+}
+# ✅ Serverless with automatic scaling
+# ✅ Built-in TTL for automatic token cleanup
+# 👍 Best for: AWS-based serverless applications
+```
+
+#### Token Encryption
+
+Enable encryption for sensitive token data:
+
+```ruby
+config.token_encryption_enabled = true
+config.token_encryption_key = ENV['JDPI_TOKEN_ENCRYPTION_KEY']  # 32+ characters required
+
+# Generate a secure encryption key:
+# ruby -e "require 'securerandom'; puts SecureRandom.hex(32)"
+```
+
+#### Production Configuration Examples
+
+**Rails Application with Redis:**
+```ruby
+# config/initializers/jdpi_client.rb
+JDPIClient.configure do |config|
+  config.jdpi_client_host = ENV.fetch('JDPI_CLIENT_HOST')
+  config.oauth_client_id = ENV.fetch('JDPI_CLIENT_ID')
+  config.oauth_secret = ENV.fetch('JDPI_CLIENT_SECRET')
+  config.logger = Rails.logger
+
+  # Shared Redis cache for clustered Rails servers
+  config.token_storage_adapter = :redis
+  config.token_storage_url = ENV.fetch('REDIS_URL')
+  config.token_encryption_enabled = Rails.env.production?
+  config.token_encryption_key = ENV.fetch('JDPI_TOKEN_ENCRYPTION_KEY')
+  config.token_storage_key_prefix = "#{Rails.env}:jdpi"
+end
+```
+
+**Serverless Application with DynamoDB:**
+```ruby
+JDPIClient.configure do |config|
+  config.jdpi_client_host = ENV.fetch('JDPI_CLIENT_HOST')
+  config.oauth_client_id = ENV.fetch('JDPI_CLIENT_ID')
+  config.oauth_secret = ENV.fetch('JDPI_CLIENT_SECRET')
+
+  # DynamoDB for serverless environments
+  config.token_storage_adapter = :dynamodb
+  config.token_storage_options = {
+    table_name: ENV.fetch('JDPI_TOKENS_TABLE', 'jdpi-tokens'),
+    region: ENV.fetch('AWS_REGION', 'us-east-1')
+  }
+  config.token_encryption_enabled = true
+  config.token_encryption_key = ENV.fetch('JDPI_TOKEN_ENCRYPTION_KEY')
+end
+```
+
+**Development/Testing:**
+```ruby
+JDPIClient.configure do |config|
+  config.jdpi_client_host = 'api.test.homl.jdpi.pstijd'
+  config.oauth_client_id = 'test_client_id'
+  config.oauth_secret = 'test_secret'
+
+  # Simple memory storage for development
+  config.token_storage_adapter = :memory
+  config.logger = Logger.new($stdout) if ENV['DEBUG']
 end
 ```
 
 ## Usage Examples
+
+### Authentication & Token Management
+
+The gem automatically handles OAuth2 token management with intelligent caching:
+
+```ruby
+# Basic token usage - automatically cached and refreshed
+auth_client = JDPIClient::Auth::Client.new
+token = auth_client.token!  # Thread-safe, auto-refreshes when expired
+
+# Scope-specific tokens for different JDPI services
+dict_token = auth_client.token!(requested_scopes: ['auth_apim', 'dict_api'])
+spi_token = auth_client.token!(requested_scopes: ['auth_apim', 'spi_api'])
+
+# Use as a proc for HTTP clients
+token_provider = auth_client.to_proc
+http_client.authorization = token_provider
+
+# Force token refresh if needed
+auth_client.refresh!
+
+# Get token information for debugging
+info = auth_client.token_info
+puts "Token cached: #{info[:cached]}"
+puts "Storage type: #{info[:storage_type]}"
+puts "Expires at: #{info[:expires_at]}"
+```
 
 ### PIX Payment
 ```ruby

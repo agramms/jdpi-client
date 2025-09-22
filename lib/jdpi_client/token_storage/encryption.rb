@@ -22,6 +22,9 @@ module JDPIClient
         def encrypt(data, encryption_key)
           raise JDPIClient::Errors::ConfigurationError, "Encryption key cannot be nil" if encryption_key.nil?
           raise JDPIClient::Errors::ConfigurationError, "Encryption key cannot be empty" if encryption_key.empty?
+          unless valid_encryption_key?(encryption_key)
+            raise JDPIClient::Errors::ConfigurationError, "Invalid encryption key format"
+          end
 
           # Generate random salt and IV
           salt = SecureRandom.bytes(32)
@@ -62,6 +65,11 @@ module JDPIClient
         # @return [Hash] Decrypted token data
         def decrypt(encrypted_data, encryption_key)
           validate_encrypted_data!(encrypted_data)
+
+          # Convert to symbols for consistent access if using string keys
+          if encrypted_data.keys.first.is_a?(String)
+            encrypted_data = encrypted_data.transform_keys(&:to_sym)
+          end
 
           # Extract components
           salt = Base64.strict_decode64(encrypted_data[:salt])
@@ -147,8 +155,13 @@ module JDPIClient
         # Validate encrypted data structure
         # @param data [Hash] Encrypted data to validate
         def validate_encrypted_data!(data)
-          unless data.is_a?(Hash) && data[:encrypted]
+          unless data.is_a?(Hash) && (data[:encrypted] || data['encrypted'])
             raise JDPIClient::Errors::ConfigurationError, "Invalid encrypted token data"
+          end
+
+          # Convert to symbols for consistent access if using string keys
+          if data.keys.first.is_a?(String)
+            data = data.transform_keys(&:to_sym)
           end
 
           required_fields = [:version, :algorithm, :salt, :iv, :auth_tag, :ciphertext]

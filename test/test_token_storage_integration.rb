@@ -4,7 +4,7 @@ require 'logger'
 class TestTokenStorageIntegration < Minitest::Test
   def setup
     @config = JDPIClient::Config.new
-    @config.token_encryption_key = 'test_encryption_key_32_characters_long'
+    @config.token_encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     @config.warn_on_local_tokens = false
   end
 

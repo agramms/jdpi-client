@@ -17,6 +17,7 @@ module JDPIClient
       when 401 then Unauthorized.new("Unauthorized")
       when 403 then Forbidden.new("Forbidden")
       when 404 then NotFound.new("Not Found")
+      when 422 then Validation.new((body && body["message"]) || "Unprocessable Entity")
       when 429 then RateLimited.new("Too Many Requests")
       when 500..599 then ServerError.new("Server Error #{status}")
       else

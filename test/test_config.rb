@@ -4,6 +4,8 @@ require_relative "test_helper"
 
 class TestConfig < Minitest::Test
   def setup
+    super  # Important: Call parent setup for WebMock stubs
+
     @config = JDPIClient::Config.new
   end
 

@@ -4,6 +4,8 @@ require_relative "test_helper"
 
 class TestHTTPRequestPaths < Minitest::Test
   def setup
+    super  # Important: Call parent setup for WebMock stubs
+
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
     @token_provider = proc { "test_token" }
@@ -139,15 +141,14 @@ class TestHTTPRequestPaths < Minitest::Test
     assert auth_client.instance_variable_get(:@expires_at) < Time.now
 
     # Test cached token when not expired
-    future_time = Time.now + 3600
-    auth_client.instance_variable_set(:@cached, "valid_token")
-    auth_client.instance_variable_set(:@expires_at, future_time)
-
-    # Mock synchronize to avoid HTTP calls
-    def auth_client.synchronize
-      yield if block_given?
-      @cached
-    end
+    storage = auth_client.instance_variable_get(:@storage)
+    cache_key = auth_client.instance_variable_get(:@cache_key)
+    token_data = {
+      "access_token" => "valid_token",
+      "expires_at" => Time.now.to_i + 3600,
+      "token_type" => "Bearer"
+    }
+    storage.store(cache_key, token_data, 3600)
 
     token = auth_client.token!
     assert_equal "valid_token", token

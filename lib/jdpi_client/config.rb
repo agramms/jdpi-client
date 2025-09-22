@@ -37,7 +37,7 @@ module JDPIClient
 
     # Token storage configuration helpers
     def shared_token_storage?
-      !@token_storage_adapter.nil? && @token_storage_adapter != :memory
+      [:redis, :dynamodb, :database].include?(@token_storage_adapter)
     end
 
     def token_encryption_enabled?

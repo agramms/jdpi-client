@@ -4,6 +4,8 @@ require_relative "test_helper"
 
 class TestAuthClient < Minitest::Test
   def setup
+    super  # Important: Call parent setup for WebMock stubs
+
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
     @config.oauth_client_id = "test_client"
@@ -25,9 +27,14 @@ class TestAuthClient < Minitest::Test
 
   def test_token_caching_with_valid_token
     # Set up a cached token that hasn't expired
-    future_time = Time.now + 3600
-    @auth_client.instance_variable_set(:@cached, "cached_token")
-    @auth_client.instance_variable_set(:@expires_at, future_time)
+    storage = @auth_client.instance_variable_get(:@storage)
+    cache_key = @auth_client.instance_variable_get(:@cache_key)
+    token_data = {
+      "access_token" => "cached_token",
+      "expires_at" => Time.now.to_i + 3600,
+      "token_type" => "Bearer"
+    }
+    storage.store(cache_key, token_data, 3600)
 
     token = @auth_client.token!
     assert_equal "cached_token", token
@@ -44,9 +51,15 @@ class TestAuthClient < Minitest::Test
   end
 
   def test_to_proc_returns_callable
-    # Set up cached token
-    @auth_client.instance_variable_set(:@cached, "proc_token")
-    @auth_client.instance_variable_set(:@expires_at, Time.now + 3600)
+    # Set up cached token in storage
+    storage = @auth_client.instance_variable_get(:@storage)
+    cache_key = @auth_client.instance_variable_get(:@cache_key)
+    token_data = {
+      "access_token" => "proc_token",
+      "expires_at" => Time.now.to_i + 3600,
+      "token_type" => "Bearer"
+    }
+    storage.store(cache_key, token_data, 3600)
 
     token_proc = @auth_client.to_proc
     assert_instance_of Proc, token_proc
@@ -123,14 +136,14 @@ class TestAuthClient < Minitest::Test
 
   def test_cached_token_when_not_expired
     # Test that cached token is returned when not expired
-    future_time = Time.now + 1800  # 30 minutes in future
-    @auth_client.instance_variable_set(:@expires_at, future_time)
-    @auth_client.instance_variable_set(:@cached, "valid_token")
-
-    # Mock the synchronize method to avoid actual HTTP calls
-    @auth_client.define_singleton_method(:synchronize) do |&block|
-      block.call
-    end
+    storage = @auth_client.instance_variable_get(:@storage)
+    cache_key = @auth_client.instance_variable_get(:@cache_key)
+    token_data = {
+      "access_token" => "valid_token",
+      "expires_at" => Time.now.to_i + 1800,  # 30 minutes in future
+      "token_type" => "Bearer"
+    }
+    storage.store(cache_key, token_data, 3600)
 
     token = @auth_client.token!
     assert_equal "valid_token", token

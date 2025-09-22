@@ -79,7 +79,7 @@ module JDPIClient
       # @return [Hash] Decrypted or original data
       def decrypt_if_enabled(data)
         return data unless @config.token_encryption_enabled?
-        return data unless data.is_a?(Hash) && data[:encrypted]
+        return data unless data.is_a?(Hash) && (data[:encrypted] || data['encrypted'])
 
         require_relative "encryption"
         JDPIClient::TokenStorage::Encryption.decrypt(data, @config.token_encryption_key)

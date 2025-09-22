@@ -34,7 +34,7 @@ module JDPIClient
                         when String
                           scopes.split(/[\s,]+/).reject(&:empty?)
                         when Array
-                          scopes.flatten.compact
+                          scopes.flatten.compact.map(&:strip).reject(&:empty?)
                         when nil
                           ["auth_apim"] # Default scope
                         else
@@ -72,7 +72,17 @@ module JDPIClient
           return true if allowed_scopes.nil? # No restrictions
 
           normalized_scopes = normalize_scopes(scopes).split(" ")
-          allowed_set = Set.new(allowed_scopes)
+
+          # Normalize allowed_scopes to an array
+          allowed_array = if allowed_scopes.is_a?(String)
+                           allowed_scopes.split(" ")
+                         elsif allowed_scopes.respond_to?(:to_a)
+                           allowed_scopes.to_a
+                         else
+                           Array(allowed_scopes)
+                         end
+
+          allowed_set = Set.new(allowed_array)
 
           normalized_scopes.all? { |scope| allowed_set.include?(scope) }
         end

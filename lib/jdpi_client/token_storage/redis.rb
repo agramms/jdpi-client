@@ -44,6 +44,12 @@ module JDPIClient
         # Deserialize and decrypt if needed
         data = MultiJson.load(serialized_data)
         decrypt_if_enabled(data)
+      rescue MultiJson::ParseError => e
+        # Handle malformed JSON gracefully - just return nil
+        if @config.logger
+          @config.logger.warn("Redis token data corrupted for key #{key}: #{e.message}")
+        end
+        nil
       rescue => e
         handle_redis_error(e, "retrieve token")
         nil
@@ -53,7 +59,9 @@ module JDPIClient
       # @param key [String] The cache key for the token
       # @return [Boolean] True if token exists and is valid
       def exists?(key)
-        @redis.exists?(key) > 0
+        result = @redis.exists?(key)
+        # Handle both MockRedis (returns boolean) and real Redis (returns integer)
+        result.is_a?(Integer) ? result > 0 : !!result
       rescue => e
         handle_redis_error(e, "check token existence")
         false
@@ -62,7 +70,9 @@ module JDPIClient
       # Delete a token by key
       # @param key [String] The cache key for the token
       def delete(key)
-        @redis.del(key) > 0
+        result = @redis.del(key)
+        # Handle both MockRedis (returns boolean) and real Redis (returns integer)
+        result.is_a?(Integer) ? result > 0 : !!result
       rescue => e
         handle_redis_error(e, "delete token")
         false
@@ -74,7 +84,9 @@ module JDPIClient
         keys = @redis.keys(pattern)
         return true if keys.empty?
 
-        @redis.del(keys) > 0
+        result = @redis.del(keys)
+        # Handle both MockRedis and real Redis return types
+        result.is_a?(Integer) ? result > 0 : !!result
       rescue => e
         handle_redis_error(e, "clear all tokens")
         false
@@ -165,11 +177,14 @@ module JDPIClient
       def stats
         info = @redis.info
         {
+          storage_type: "Redis",
           redis_version: info["redis_version"],
           connected_clients: info["connected_clients"],
           used_memory_human: info["used_memory_human"],
+          memory_usage: info["used_memory_human"],
           total_keys: @redis.dbsize,
           token_keys: @redis.keys("#{@config.token_storage_key_prefix}:*").size,
+          encrypted: @config.token_encryption_enabled?,
           encryption_enabled: @config.token_encryption_enabled?
         }
       rescue => e
@@ -217,7 +232,7 @@ module JDPIClient
         # Set sensible defaults
         options[:timeout] ||= 5
         options[:reconnect_attempts] ||= 3
-        options[:reconnect_delay] ||= 1
+        # Note: reconnect_delay is not a standard Redis gem option, removing it
 
         # SSL configuration for production
         if @config.production? && @config.token_storage_url&.start_with?("rediss://")

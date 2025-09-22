@@ -4,6 +4,8 @@ require_relative "test_helper"
 
 class TestMaximumCoverage < Minitest::Test
   def setup
+    super  # Important: Call parent setup for WebMock stubs
+
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
     @config.oauth_client_id = "test_client"
@@ -283,7 +285,7 @@ class TestMaximumCoverage < Minitest::Test
       [503, nil, JDPIClient::Errors::ServerError, "Server Error 503"],
       [599, nil, JDPIClient::Errors::ServerError, "Server Error 599"],
       [418, nil, JDPIClient::Errors::Error, "HTTP 418"],
-      [422, nil, JDPIClient::Errors::Error, "HTTP 422"]
+      [422, nil, JDPIClient::Errors::Validation, "Unprocessable Entity"]
     ]
 
     error_cases.each do |status, body, expected_class, expected_message|

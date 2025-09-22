@@ -197,7 +197,7 @@ class TestCoverageBoost < Minitest::Test
   def test_scope_manager_all_edge_cases
     # Test normalize_scopes with various inputs
     test_cases = [
-      [nil, "auth:token"], # Default scope for nil
+      [nil, "auth_apim"], # Default scope for nil
       ["", ""],
       ["   ", ""],
       ["scope1", "scope1"],
@@ -216,12 +216,12 @@ class TestCoverageBoost < Minitest::Test
 
     # Test parse_scopes_from_response with various inputs
     response_cases = [
-      [nil, "auth:token"],
-      [{}, "auth:token"],
+      [nil, "auth_apim"],
+      [{}, "auth_apim"],
       [{"scope" => "custom:scope"}, "custom:scope"],
       [{"scope" => "  custom:scope  "}, "custom:scope"],
-      [{"scope" => ""}, "auth:token"],
-      [{"other_key" => "value"}, "auth:token"]
+      [{"scope" => ""}, "auth_apim"],
+      [{"other_key" => "value"}, "auth_apim"]
     ]
 
     response_cases.each do |response, expected|
@@ -340,7 +340,20 @@ class TestCoverageBoost < Minitest::Test
     [:redis, :dynamodb, :database].each do |adapter|
       next unless results[adapter]
 
-      config.token_storage_adapter = adapter
+      # Configure based on adapter type
+      case adapter
+      when :redis
+        # Set up MockRedis for testing
+        require 'mock_redis'
+        mock_redis = MockRedis.new
+        Redis.define_singleton_method(:new) { |*args| mock_redis }
+        config = create_test_config(:redis)
+      when :dynamodb
+        config = create_test_config(:dynamodb)
+      when :database
+        config = create_test_config(:database)
+      end
+
       storage = factory.create(config)
       assert storage.class.name.downcase.include?(adapter.to_s)
     end
@@ -414,7 +427,7 @@ class TestCoverageBoost < Minitest::Test
 
     error_classes.each do |error_class|
       error = error_class.new("test message")
-      assert_instance_of JDPIClient::Errors::Error, error
+      assert_kind_of JDPIClient::Errors::Error, error  # Use kind_of for inheritance
       assert_kind_of StandardError, error
       assert_equal "test message", error.message
     end
@@ -446,7 +459,7 @@ class TestCoverageBoost < Minitest::Test
     error2 = JDPIClient::Errors.from_response(400, {})
     assert_instance_of JDPIClient::Errors::Validation, error2
 
-    error3 = JDPIClient::Errors.from_response(400, {"error" => "custom message"})
+    error3 = JDPIClient::Errors.from_response(400, {"message" => "custom message"})
     assert_instance_of JDPIClient::Errors::Validation, error3
     assert_includes error3.message, "custom message"
   end

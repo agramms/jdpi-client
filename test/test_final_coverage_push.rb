@@ -2,6 +2,8 @@ require 'test_helper'
 
 class TestFinalCoveragePush < Minitest::Test
   def setup
+    super  # Important: Call parent setup for WebMock stubs
+
     @config = JDPIClient::Config.new
     @config.jdpi_client_host = "api.test.homl.jdpi.pstijd"
     @config.oauth_client_id = "test_client"
@@ -106,7 +108,7 @@ class TestFinalCoveragePush < Minitest::Test
     service = JDPIClient::SPI::OP.new(nil, @config)
 
     methods_data = [
-      [:create_order!, [{ order: "test" }, { idempotency_key: "order123" }]],
+      [:create_order!, [{ order: "test" }]],
       [:consult_request, ["req123"]],
       [:account_statement_pi, [{ date: "2023-01-01" }]],
       [:account_statement_tx, [{ date: "2023-01-01" }]],
@@ -125,7 +127,7 @@ class TestFinalCoveragePush < Minitest::Test
     service = JDPIClient::SPI::OD.new(nil, @config)
 
     methods_data = [
-      [:create_order!, [{ order: "test" }, { idempotency_key: "order456" }]],
+      [:create_order!, [{ order: "test" }]],
       [:consult_request, ["req456"]],
       [:reasons, []],
       [:credit_status_refund, ["end2end123"]]
@@ -176,8 +178,8 @@ class TestFinalCoveragePush < Minitest::Test
     end
   end
 
-  def test_parse_json_scenarios
-    http = JDPIClient::HTTP::Client.new(@config, nil)
+  def test_parse_json_scenarios(http = nil)
+    http ||= JDPIClient::HTTP.new(base: @config.base_url, token_provider: nil)
 
     # All parse_json scenarios
     scenarios = [
@@ -233,9 +235,10 @@ class TestFinalCoveragePush < Minitest::Test
     assert_equal "auth:token", token_data[:scope] # Default scope
   end
 
-  def test_build_oauth_params(auth_client)
-    # Test with default scopes
-    params = auth_client.send(:build_oauth_params, "auth:token")
+  def test_build_oauth_params(auth_client = nil)
+    auth_client ||= JDPIClient::Auth::Client.new(@config)
+    # Test with default scopes (should not include scope parameter)
+    params = auth_client.send(:build_oauth_params, "auth_apim")
     expected_params = {
       grant_type: "client_credentials",
       client_id: @config.oauth_client_id,
@@ -243,9 +246,9 @@ class TestFinalCoveragePush < Minitest::Test
     }
     assert_equal expected_params, params
 
-    # Test with custom scopes
-    params = auth_client.send(:build_oauth_params, "custom:scope dict:read")
-    expected_params[:scope] = "custom:scope dict:read"
+    # Test with custom scopes (should include scope parameter)
+    params = auth_client.send(:build_oauth_params, "auth_apim dict_api")
+    expected_params[:scope] = "auth_apim dict_api"
     assert_equal expected_params, params
   end
 
@@ -308,7 +311,8 @@ class TestFinalCoveragePush < Minitest::Test
     test_config_boolean_helpers(config)
   end
 
-  def test_base_url_edge_cases
+  def test_base_url_edge_cases(config = nil)
+    config ||= JDPIClient::Config.new
     test_cases = [
       # Production hosts (should use HTTPS)
       ["api.production.jdpi.pstijd", "https://api.production.jdpi.pstijd"],
@@ -337,7 +341,8 @@ class TestFinalCoveragePush < Minitest::Test
     end
   end
 
-  def test_production_detection_edge_cases
+  def test_production_detection_edge_cases(config = nil)
+    config ||= JDPIClient::Config.new
     production_patterns = [
       "api.production.jdpi.pstijd",
       "prod.api.jdpi.pstijd",
@@ -374,30 +379,31 @@ class TestFinalCoveragePush < Minitest::Test
     end
   end
 
-  def test_config_boolean_helpers
+  def test_config_boolean_helpers(config = nil)
+    config ||= JDPIClient::Config.new  # Use fresh config without encryption key
     # Test token_encryption_enabled?
-    refute @config.token_encryption_enabled?
+    refute config.token_encryption_enabled?
 
-    @config.token_encryption_key = ""
-    refute @config.token_encryption_enabled?
+    config.token_encryption_key = ""
+    refute config.token_encryption_enabled?
 
-    @config.token_encryption_key = nil
-    refute @config.token_encryption_enabled?
+    config.token_encryption_key = nil
+    refute config.token_encryption_enabled?
 
-    @config.token_encryption_key = "valid_key"
-    assert @config.token_encryption_enabled?
+    config.token_encryption_key = "valid_key"
+    assert config.token_encryption_enabled?
 
     # Test shared_token_storage?
-    @config.token_storage_adapter = :memory
-    refute @config.shared_token_storage?
+    config.token_storage_adapter = :memory
+    refute config.shared_token_storage?
 
     [:redis, :dynamodb, :database].each do |adapter|
-      @config.token_storage_adapter = adapter
-      assert @config.shared_token_storage?, "#{adapter} should be considered shared storage"
+      config.token_storage_adapter = adapter
+      assert config.shared_token_storage?, "#{adapter} should be considered shared storage"
     end
 
-    @config.token_storage_adapter = :unknown
-    refute @config.shared_token_storage?
+    config.token_storage_adapter = :unknown
+    refute config.shared_token_storage?
   end
 
   # Test all encryption edge cases
@@ -452,7 +458,7 @@ class TestFinalCoveragePush < Minitest::Test
     test_encryption_errors(key)
   end
 
-  def test_encryption_errors
+  def test_encryption_errors(key = nil)
     valid_key = JDPIClient::TokenStorage::Encryption.generate_key
     test_data = {"test" => "data"}
 
@@ -513,7 +519,7 @@ class TestFinalCoveragePush < Minitest::Test
     end
 
     # Test TTL scenarios
-    test_ttl_scenarios(storage)
+    run_ttl_scenarios(storage)
 
     # Test stats functionality
     stats = storage.stats
@@ -526,7 +532,7 @@ class TestFinalCoveragePush < Minitest::Test
     test_cleanup_scenarios(storage)
   end
 
-  def test_ttl_scenarios(storage)
+  def run_ttl_scenarios(storage)
     # Test immediate expiration
     storage.store("immediate_expire", {"data" => "test"}, 0)
     refute storage.exists?("immediate_expire")
@@ -542,8 +548,8 @@ class TestFinalCoveragePush < Minitest::Test
     refute storage.exists?("short_ttl")
   end
 
-  def test_cleanup_scenarios
-    storage = JDPIClient::TokenStorage::Memory.new(@config)
+  def test_cleanup_scenarios(storage = nil)
+    storage ||= JDPIClient::TokenStorage::Memory.new(@config)
 
     # Add some tokens with different expiry times
     storage.store("valid_1", {"data" => "1"}, 3600)
@@ -571,7 +577,13 @@ class TestFinalCoveragePush < Minitest::Test
         if args.empty?
           service.send(method_name)
         else
-          service.send(method_name, *args)
+          # Check if last argument is a hash that should be keyword arguments
+          if args.last.is_a?(Hash) && args.last.keys.any? { |k| k.is_a?(Symbol) }
+            *positional_args, kwargs = args
+            service.send(method_name, *positional_args, **kwargs)
+          else
+            service.send(method_name, *args)
+          end
         end
       rescue StandardError => e
         # Expected network errors - method body was executed for coverage

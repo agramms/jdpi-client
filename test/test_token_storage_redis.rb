@@ -121,7 +121,7 @@ class TestTokenStorageRedis < Minitest::Test
   def test_clear_all_removes_matching_keys
     test_keys = []
     3.times do |i|
-      key = "jdpi_client:test_clear_#{i}_#{SecureRandom.hex(4)}"
+      key = "#{@config.token_storage_key_prefix}:test_clear_#{i}_#{SecureRandom.hex(4)}"
       @storage.store(key, @token, 3600)
       test_keys << key
     end
@@ -145,12 +145,18 @@ class TestTokenStorageRedis < Minitest::Test
     invalid_config = create_test_config(:redis)
     invalid_config.token_storage_url = 'redis://invalid_host:9999/0'
 
+    # Store original method
+    original_new = Redis.method(:new)
+
     # Mock Redis.new to raise connection error
     Redis.define_singleton_method(:new) { |*args| raise Redis::CannotConnectError }
 
     assert_raises(JDPIClient::Errors::Error) do
       JDPIClient::TokenStorage::Redis.new(invalid_config)
     end
+
+    # Restore original method
+    Redis.define_singleton_method(:new, original_new)
   end
 
   def test_ttl_expiration

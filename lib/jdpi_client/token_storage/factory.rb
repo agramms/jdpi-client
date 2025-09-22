@@ -9,6 +9,10 @@ module JDPIClient
         # @param config [JDPIClient::Config] Configuration object
         # @return [JDPIClient::TokenStorage::Base] Storage adapter instance
         def create(config)
+          unless config.respond_to?(:validate_token_storage_config!)
+            raise ArgumentError, "Expected JDPIClient::Config object, got #{config.class}"
+          end
+
           config.validate_token_storage_config!
 
           case config.token_storage_adapter
