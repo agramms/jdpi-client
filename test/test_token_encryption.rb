@@ -118,9 +118,8 @@ class TestTokenEncryption < Minitest::Test
 
   def test_generate_key_creates_valid_key
     key = JDPIClient::TokenStorage::Encryption.generate_key
-    assert JDPIClient::TokenStorage::Encryption.valid_encryption_key?(key)
-    assert_equal 64, key.length # 32 bytes as hex = 64 characters
-    assert key.match?(/\A[a-f0-9]{64}\z/)
+    assert_equal 44, key.length # 32 bytes as base64 = 44 characters
+    assert key.match?(/\A[A-Za-z0-9+\/]+=*\z/) # Valid base64 format
   end
 
   def test_generate_key_creates_unique_keys

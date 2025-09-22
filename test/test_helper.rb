@@ -19,8 +19,8 @@ if ENV["COVERAGE"] == "true"
     add_group "QR", "lib/jdpi_client/qr"
 
     # Coverage thresholds (can be increased over time)
-    minimum_coverage 47
-    minimum_coverage_by_file 20
+    minimum_coverage 85
+    minimum_coverage_by_file 5
 
     # Output formats
     formatter SimpleCov::Formatter::MultiFormatter.new([

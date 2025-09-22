@@ -21,6 +21,7 @@ module JDPIClient
         # @return [Hash] Encrypted data structure
         def encrypt(data, encryption_key)
           raise JDPIClient::Errors::ConfigurationError, "Encryption key cannot be nil" if encryption_key.nil?
+          raise JDPIClient::Errors::ConfigurationError, "Encryption key cannot be empty" if encryption_key.empty?
 
           # Generate random salt and IV
           salt = SecureRandom.bytes(32)
@@ -103,8 +104,8 @@ module JDPIClient
         # Generate a secure encryption key
         # @return [String] A secure random encryption key
         def generate_key
-          # Generate 32 bytes (256 bits) of random data and encode as hex
-          SecureRandom.hex(32)
+          # Generate 32 bytes (256 bits) of random data and encode as base64
+          Base64.strict_encode64(SecureRandom.bytes(32))
         end
 
         private

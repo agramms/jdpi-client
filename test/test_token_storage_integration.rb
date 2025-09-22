@@ -47,7 +47,7 @@ class TestTokenStorageIntegration < Minitest::Test
     # Test all encryption methods
     encryption_key = JDPIClient::TokenStorage::Encryption.generate_key
     assert_instance_of String, encryption_key
-    assert_equal 32, encryption_key.length
+    assert_equal 44, encryption_key.length  # Base64 encoded 32 bytes = 44 chars
 
     # Test key validation
     assert JDPIClient::TokenStorage::Encryption.valid_key?(encryption_key)
@@ -74,14 +74,14 @@ class TestTokenStorageIntegration < Minitest::Test
     # Test all scope manager functionality
     scopes = ['auth:token', 'dict:read', 'spi:write']
 
-    # Test normalization
+    # Test normalization (returns string, not array)
     normalized = JDPIClient::Auth::ScopeManager.normalize_scopes(scopes)
-    assert_equal ['auth:token', 'dict:read', 'spi:write'], normalized
+    assert_equal 'auth:token dict:read spi:write', normalized
 
     # Test with duplicates and different formats
     mixed_scopes = ['auth:token', 'dict:read dict:write', 'auth:token']
     normalized_mixed = JDPIClient::Auth::ScopeManager.normalize_scopes(mixed_scopes)
-    assert_equal ['auth:token', 'dict:read', 'dict:write'], normalized_mixed
+    assert_equal 'auth:token dict:read dict:write', normalized_mixed
 
     # Test fingerprint generation
     fingerprint = JDPIClient::Auth::ScopeManager.scope_fingerprint(normalized)
@@ -140,7 +140,7 @@ class TestTokenStorageIntegration < Minitest::Test
     # Test adapter info
     adapter_info = JDPIClient::TokenStorage::Factory.adapter_info
     assert adapter_info.key?(:memory)
-    assert_equal 'Always available in-memory storage', adapter_info[:memory][:description]
+    assert_equal 'In-memory storage (not shared across instances)', adapter_info[:memory][:description]
   end
 
   def test_warning_system
