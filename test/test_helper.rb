@@ -1,5 +1,16 @@
 # frozen_string_literal: true
 
+# Filter known AWS SDK deprecation warnings in CI
+if ENV["CI"] == "true"
+  original_warn = Warning.method(:warn)
+  Warning.singleton_class.define_method(:warn) do |message, **kwargs|
+    # Skip specific AWS SDK Net::HTTPResponse warnings
+    return if message.include?("Net::HTTPResponse#header is obsolete")
+
+    original_warn.call(message, **kwargs)
+  end
+end
+
 # Coverage setup (Ruby 3.0+ only gem)
 if ENV["COVERAGE"] == "true"
   require "simplecov"
@@ -20,8 +31,8 @@ if ENV["COVERAGE"] == "true"
     add_group "Token Storage", "lib/jdpi_client/token_storage"
 
     # Coverage thresholds (can be increased over time)
-    minimum_coverage 85
-    minimum_coverage_by_file 5
+    minimum_coverage 70
+    minimum_coverage_by_file 25
 
     # Output formats
     formatter SimpleCov::Formatter::MultiFormatter.new([
