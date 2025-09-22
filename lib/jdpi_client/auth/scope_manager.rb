@@ -9,24 +9,20 @@ module JDPIClient
     class ScopeManager
       # Default scopes for JDPI operations
       DEFAULT_SCOPES = {
-        dict: %w[dict:read dict:write],
-        spi: %w[spi:read spi:write spi:payment],
-        qr: %w[qr:read qr:write qr:generate],
-        participants: %w[participants:read],
-        auth: %w[auth:token]
+        dict: %w[dict_api],
+        spi: %w[spi_api],
+        qr: %w[qrcode_api],
+        auth: %w[auth_apim]
       }.freeze
 
       # Scope combinations for different service groups
       SCOPE_COMBINATIONS = {
-        minimal: %w[auth:token],
-        dict_read: %w[auth:token dict:read],
-        dict_write: %w[auth:token dict:read dict:write],
-        spi_read: %w[auth:token spi:read],
-        spi_write: %w[auth:token spi:read spi:write spi:payment],
-        qr_read: %w[auth:token qr:read],
-        qr_write: %w[auth:token qr:read qr:write qr:generate],
-        participants: %w[auth:token participants:read],
-        full_access: %w[auth:token dict:read dict:write spi:read spi:write spi:payment qr:read qr:write qr:generate participants:read]
+        minimal: %w[auth_apim],
+        dict: %w[auth_apim dict_api],
+        spi: %w[auth_apim spi_api],
+        qr: %w[auth_apim qrcode_api],
+        qrcode: %w[auth_apim qrcode_api],
+        full_access: %w[auth_apim dict_api spi_api qrcode_api]
       }.freeze
 
       class << self
@@ -40,7 +36,7 @@ module JDPIClient
                         when Array
                           scopes.flatten.compact
                         when nil
-                          ["auth:token"] # Default scope
+                          ["auth_apim"] # Default scope
                         else
                           [scopes.to_s]
                         end
@@ -83,30 +79,18 @@ module JDPIClient
 
         # Get the default scopes for a service type
         # @param service_type [Symbol] Service type (:dict, :spi, :qr, etc.)
-        # @param operation [Symbol] Operation type (:read, :write, etc.)
+        # @param operation [Symbol] Operation type (ignored - JDPI uses service-level scopes)
         # @return [Array<String>] Default scopes for the service
-        def default_scopes_for(service_type, operation = :read)
-          base_scopes = ["auth:token"]
+        def default_scopes_for(service_type, operation = nil)
+          base_scopes = ["auth_apim"]
 
           case service_type
           when :dict
-            base_scopes += operation == :write ? %w[dict:read dict:write] : %w[dict:read]
+            base_scopes += %w[dict_api]
           when :spi
-            case operation
-            when :write, :payment
-              base_scopes += %w[spi:read spi:write spi:payment]
-            else
-              base_scopes += %w[spi:read]
-            end
-          when :qr
-            case operation
-            when :write, :generate
-              base_scopes += %w[qr:read qr:write qr:generate]
-            else
-              base_scopes += %w[qr:read]
-            end
-          when :participants
-            base_scopes += %w[participants:read]
+            base_scopes += %w[spi_api]
+          when :qr, :qrcode
+            base_scopes += %w[qrcode_api]
           end
 
           base_scopes.uniq
@@ -136,7 +120,7 @@ module JDPIClient
         # @return [String] Normalized scopes from response
         def parse_scopes_from_response(oauth_response)
           scope_value = oauth_response["scope"] || oauth_response[:scope]
-          normalize_scopes(scope_value || "auth:token")
+          normalize_scopes(scope_value || "auth_apim")
         end
 
         # Generate scope parameter for OAuth request
@@ -152,27 +136,31 @@ module JDPIClient
         def describe_scopes(scopes)
           normalized = normalize_scopes(scopes).split(" ")
           capabilities = {
-            auth: [],
-            dict: [],
-            spi: [],
-            qr: [],
-            participants: []
+            auth_apim: false,
+            dict_api: false,
+            spi_api: false,
+            qrcode_api: false
           }
 
           normalized.each do |scope|
-            service, permission = scope.split(":", 2)
-            next unless capabilities.key?(service.to_sym)
-
-            capabilities[service.to_sym] << permission
+            case scope
+            when "auth_apim"
+              capabilities[:auth_apim] = true
+            when "dict_api"
+              capabilities[:dict_api] = true
+            when "spi_api"
+              capabilities[:spi_api] = true
+            when "qrcode_api"
+              capabilities[:qrcode_api] = true
+            end
           end
 
           # Convert to human-readable format
           {
-            authentication: capabilities[:auth].any?,
-            dict_operations: capabilities[:dict],
-            spi_operations: capabilities[:spi],
-            qr_operations: capabilities[:qr],
-            participant_access: capabilities[:participants].any?,
+            authentication: capabilities[:auth_apim],
+            dict_operations: capabilities[:dict_api],
+            spi_operations: capabilities[:spi_api],
+            qr_operations: capabilities[:qrcode_api],
             total_scopes: normalized.size,
             scope_fingerprint: scope_fingerprint(normalize_scopes(scopes))
           }
@@ -182,8 +170,8 @@ module JDPIClient
         # @param scope [String] Individual scope to validate
         # @return [Boolean] True if scope format is valid
         def valid_scope_format?(scope)
-          # JDPI scopes should be in format "service:permission"
-          scope.match?(/\A[a-z_]+:[a-z_]+\z/)
+          # JDPI scopes are simple service names
+          %w[auth_apim dict_api spi_api qrcode_api].include?(scope)
         end
 
         # Validate all scopes in a collection

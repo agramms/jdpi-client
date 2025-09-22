@@ -10,7 +10,7 @@ module JDPIClient
       include MonitorMixin
 
       TOKEN_PATH = "/auth/jdpi/connect/token"
-      DEFAULT_SCOPES = "auth:token"
+      DEFAULT_SCOPES = "auth_apim"
 
       attr_reader :config, :storage, :scopes
 
