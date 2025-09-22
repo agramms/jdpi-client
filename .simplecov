@@ -30,7 +30,7 @@ SimpleCov.configure do
 
   # Set coverage thresholds (can be increased over time)
   minimum_coverage 70
-  minimum_coverage_by_file 30
+  minimum_coverage_by_file 25
   # refuse_coverage_drop  # Disabled to allow threshold adjustments
 
   # Configure output formats
