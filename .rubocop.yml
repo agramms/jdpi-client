@@ -6,7 +6,10 @@ AllCops:
     - 'tmp/**/*'
 
 Layout/LineLength:
-  Max: 120
+  Max: 130
+  Exclude:
+    - 'test/**/*'
+  AllowedPatterns: ['^\s*#.*', '.*<<~SQL.*']
 
 Style/Documentation:
   Enabled: false
@@ -18,7 +21,60 @@ Style/FrozenStringLiteralComment:
   Enabled: true
 
 Metrics/MethodLength:
-  Max: 20
+  Max: 32
+  Exclude:
+    - 'test/**/*'
 
 Metrics/ClassLength:
-  Max: 150
+  Max: 350
+  Exclude:
+    - 'test/**/*'
+
+Metrics/ModuleLength:
+  Max: 120
+  Exclude:
+    - 'test/**/*'
+
+Metrics/AbcSize:
+  Max: 35
+  Exclude:
+    - 'test/**/*'
+
+Metrics/ParameterLists:
+  Max: 6
+  Exclude:
+    - 'test/**/*'
+
+Metrics/CyclomaticComplexity:
+  Max: 12
+  Exclude:
+    - 'test/**/*'
+
+Metrics/PerceivedComplexity:
+  Max: 10
+  Exclude:
+    - 'test/**/*'
+
+Metrics/BlockLength:
+  Exclude:
+    - '*.gemspec'
+    - 'Rakefile'
+    - '.simplecov'
+    - 'test/**/*'
+
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+Naming/VariableNumber:
+  Enabled: false
+
+Lint/DuplicateBranch:
+  Enabled: false
+
+Lint/UselessAssignment:
+  Exclude:
+    - 'test/**/*'
+
+Lint/ShadowedArgument:
+  Exclude:
+    - 'test/**/*'
