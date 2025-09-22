@@ -19,6 +19,11 @@
 /test/tmp/
 /test/reports/
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 # Logs
 /log/
 *.log
