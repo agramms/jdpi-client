@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   module QR
     class Client
@@ -29,7 +30,8 @@ module JDPIClient
       end
 
       def cobv_generate(payload, idempotency_key: nil)
-        @http.post("/qrcode-api/jdpi/qrcode/api/v1/dinamico/cobv/gerar", body: payload, idempotency_key: idempotency_key)
+        @http.post("/qrcode-api/jdpi/qrcode/api/v1/dinamico/cobv/gerar", body: payload,
+                                                                         idempotency_key: idempotency_key)
       end
 
       def cobv_update(id_documento, payload)

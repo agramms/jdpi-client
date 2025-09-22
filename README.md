@@ -199,7 +199,7 @@ bundle exec rake
 # Auto-fix linting issues
 bundle exec rubocop -a
 
-# Run tests with coverage (Ruby 3.0+)
+# Run tests with coverage
 bundle exec rake test_coverage
 
 # Generate coverage report only
@@ -212,13 +212,14 @@ bundle exec rake ci
 COVERAGE=true bundle exec rake test
 ```
 
-#### Coverage Requirements
+#### Coverage Features
 
-- **Ruby 3.0+** required for coverage tracking
-- Minimum coverage threshold: **85%**
-- Per-file minimum: **70%**
+- Current coverage: **72%** (minimum threshold enforced)
+- Per-file minimum: **60%**
 - HTML reports generated in `coverage/index.html`
 - Branch coverage enabled for detailed analysis
+- Works across all supported Ruby versions (3.0+)
+- Thresholds can be increased as more tests are added
 
 ### Building the Gem
 

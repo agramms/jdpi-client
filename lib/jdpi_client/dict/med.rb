@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   module DICT
     class MED
@@ -9,7 +10,8 @@ module JDPIClient
       end
 
       def create(payload, idempotency_key:)
-        @http.post("/chave-devolucao-api/jdpi/dict/api/v1/devolucao/incluir", body: payload, idempotency_key: idempotency_key)
+        @http.post("/chave-devolucao-api/jdpi/dict/api/v1/devolucao/incluir", body: payload,
+                                                                              idempotency_key: idempotency_key)
       end
 
       def list_pending

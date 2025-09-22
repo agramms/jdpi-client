@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   class Config
     attr_accessor :jdpi_client_host, :oauth_client_id, :oauth_secret,

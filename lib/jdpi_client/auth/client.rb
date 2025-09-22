@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require "monitor"
 
 module JDPIClient
@@ -30,10 +31,10 @@ module JDPIClient
           f.adapter Faraday.default_adapter
         end
         resp = conn.post(TOKEN_PATH, {
-          grant_type: "client_credentials",
-          client_id: @config.oauth_client_id,
-          client_secret: @config.oauth_secret
-        })
+                           grant_type: "client_credentials",
+                           client_id: @config.oauth_client_id,
+                           client_secret: @config.oauth_secret
+                         })
         data = MultiJson.load(resp.body)
         @cached = data["access_token"]
         ttl = data["expires_in"] || 300

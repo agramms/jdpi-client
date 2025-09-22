@@ -11,32 +11,22 @@ Rake::TestTask.new(:test) do |t|
   t.verbose = true
 end
 
-# Test task with coverage (Ruby 3.0+)
-desc "Run tests with coverage (Ruby 3.0+)"
+# Test task with coverage
+desc "Run tests with coverage"
 task :test_coverage do
-  if RUBY_VERSION >= "3.0.0"
-    puts "🧪 Running tests with coverage for Ruby #{RUBY_VERSION}"
-    ENV["COVERAGE"] = "true"
-    Rake::Task[:test].invoke
-  else
-    puts "⚠️  Coverage requires Ruby 3.0+, current: #{RUBY_VERSION}"
-    puts "   Running tests without coverage..."
-    Rake::Task[:test].invoke
-  end
+  puts "🧪 Running tests with coverage for Ruby #{RUBY_VERSION}"
+  ENV["COVERAGE"] = "true"
+  Rake::Task[:test].invoke
 end
 
 # RuboCop linting
 RuboCop::RakeTask.new
 
 # Coverage report task
-desc "Generate coverage report (Ruby 3.0+)"
+desc "Generate coverage report"
 task :coverage do
-  if RUBY_VERSION >= "3.0.0"
-    Rake::Task[:test_coverage].invoke
-    puts "\n📊 Coverage report generated in coverage/index.html"
-  else
-    puts "⚠️  Coverage requires Ruby 3.0+, current: #{RUBY_VERSION}"
-  end
+  Rake::Task[:test_coverage].invoke
+  puts "\n📊 Coverage report generated in coverage/index.html"
 end
 
 # Clean task
@@ -57,7 +47,7 @@ end
 
 # Install gem locally
 desc "Install gem locally"
-task :install => :build do
+task install: :build do
   gem_file = Dir["jdpi_client-*.gem"].last
   system("gem install #{gem_file} --local")
 end
@@ -65,14 +55,10 @@ end
 # Full test suite with coverage and linting
 desc "Run full test suite (tests + coverage + linting)"
 task :ci do
-  if RUBY_VERSION >= "3.0.0"
-    Rake::Task[:test_coverage].invoke
-  else
-    Rake::Task[:test].invoke
-  end
+  Rake::Task[:test_coverage].invoke
   Rake::Task[:rubocop].invoke
   puts "\n✅ All checks completed successfully!"
 end
 
 # Default task
-task default: [:test, :rubocop]
+task default: %i[test rubocop]

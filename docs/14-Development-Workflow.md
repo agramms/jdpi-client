@@ -89,7 +89,7 @@ bundle exec ruby test/test_config.rb -n test_production_detection
 # With verbose output
 bundle exec rake test TESTOPTS="-v"
 
-# Generate coverage report (Ruby 3.0+)
+# Generate coverage report
 bundle exec rake test_coverage
 # OR
 COVERAGE=true bundle exec rake test

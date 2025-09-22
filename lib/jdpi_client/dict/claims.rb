@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   module DICT
     class Claims
@@ -9,7 +10,8 @@ module JDPIClient
       end
 
       def create(payload, idempotency_key:)
-        @http.post("/chave-reivindicacao-api/jdpi/dict/api/v1/reivindicacao/incluir", body: payload, idempotency_key: idempotency_key)
+        @http.post("/chave-reivindicacao-api/jdpi/dict/api/v1/reivindicacao/incluir", body: payload,
+                                                                                      idempotency_key: idempotency_key)
       end
 
       def list_pending

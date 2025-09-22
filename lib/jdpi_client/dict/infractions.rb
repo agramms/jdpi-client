@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   module DICT
     class Infractions
@@ -9,7 +10,8 @@ module JDPIClient
       end
 
       def create(payload, idempotency_key:)
-        @http.post("/chave-relato-infracao-api/jdpi/dict/api/v1/relato-infracao/incluir", body: payload, idempotency_key: idempotency_key)
+        @http.post("/chave-relato-infracao-api/jdpi/dict/api/v1/relato-infracao/incluir", body: payload,
+                                                                                          idempotency_key: idempotency_key)
       end
 
       def list_pending

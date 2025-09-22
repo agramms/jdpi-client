@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 module JDPIClient
   class HTTP
     IDEMPOTENCY_HEADER = "Chave-Idempotencia"
@@ -10,8 +11,8 @@ module JDPIClient
 
       @conn = Faraday.new(url: @base) do |f|
         f.request :retry, max: 2, interval: 0.2, interval_randomness: 0.2, backoff_factor: 2,
-                           methods: %i[get post put patch delete],
-                           exceptions: [Faraday::TimeoutError, Faraday::ConnectionFailed]
+                          methods: %i[get post put patch delete],
+                          exceptions: [Faraday::TimeoutError, Faraday::ConnectionFailed]
         f.response :raise_error # convert 4xx/5xx to exceptions; we catch below
         f.adapter Faraday.default_adapter
       end
@@ -48,7 +49,7 @@ module JDPIClient
       status = e.response&.dig(:status) || 500
       body = begin
         parse_json(e.response&.dig(:body))
-      rescue
+      rescue StandardError
         nil
       end
       raise JDPIClient::Errors.from_response(status, body)
@@ -57,13 +58,14 @@ module JDPIClient
     def default_headers
       {
         "Authorization" => "Bearer #{@token_provider.call}",
-        "Content-Type"  => "application/json; charset=utf-8",
-        "Accept"        => "application/json"
+        "Content-Type" => "application/json; charset=utf-8",
+        "Accept" => "application/json"
       }
     end
 
     def parse_json(raw)
       return {} if raw.nil? || raw.empty?
+
       if raw.is_a?(String)
         MultiJson.load(raw)
       else
