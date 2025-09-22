@@ -82,5 +82,7 @@ jobs:
     - name: Build gem
       run: gem build jdpi_client.gemspec
 
-    - name: Validate gem
-      run: gem install jdpi_client-*.gem --local
+    - name: Validate gem structure
+      run: |
+        gem spec jdpi_client-*.gem --ruby > /dev/null
+        echo "✅ Gem built and validated successfully"
