@@ -30,7 +30,8 @@ Gem::Specification.new do |spec|
 
   # Optional dependencies for token storage backends (dev/test only)
   spec.add_development_dependency "activerecord", ">= 6.0"
-  spec.add_development_dependency "aws-sdk-dynamodb", ">= 1.0"
+  spec.add_development_dependency "aws-sdk-dynamodb", "~> 1.150"
+  spec.add_development_dependency "aws-sdk-core", "~> 3.190"
   spec.add_development_dependency "pg", ">= 1.0"
   spec.add_development_dependency "redis", ">= 4.0"
   spec.add_development_dependency "sqlite3", ">= 1.4"
