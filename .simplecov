@@ -27,8 +27,8 @@ SimpleCov.configure do
   add_group "Core", ["lib/jdpi_client.rb"]
 
   # Set coverage thresholds (can be increased over time)
-  minimum_coverage 72
-  minimum_coverage_by_file 60
+  minimum_coverage 90
+  minimum_coverage_by_file 85
   refuse_coverage_drop
 
   # Configure output formats

@@ -57,4 +57,34 @@ class TestDICTKeys < Minitest::Test
     http_client = dict_keys.instance_variable_get(:@http)
     assert_same mock_http, http_client
   end
+
+  def test_all_methods_exist
+    dict_keys = JDPIClient::DICT::Keys.new(nil, @config)
+
+    # Test that all expected methods exist
+    assert_respond_to dict_keys, :create
+    assert_respond_to dict_keys, :update
+    assert_respond_to dict_keys, :delete
+    assert_respond_to dict_keys, :list_by_customer
+    assert_respond_to dict_keys, :get
+    assert_respond_to dict_keys, :stats
+  end
+
+  def test_method_signatures
+    dict_keys = JDPIClient::DICT::Keys.new(nil, @config)
+
+    # Test create method signature (payload + keyword arg)
+    assert_equal(2, dict_keys.method(:create).arity)
+
+    # Test update method signature (chave, payload + keyword arg)
+    assert_equal(3, dict_keys.method(:update).arity)
+
+    # Test delete method signature (chave + keyword arg)
+    assert_equal(2, dict_keys.method(:delete).arity)
+
+    # Test other methods (positional args only)
+    assert_equal(1, dict_keys.method(:list_by_customer).arity)
+    assert_equal(1, dict_keys.method(:get).arity)
+    assert_equal(1, dict_keys.method(:stats).arity)
+  end
 end

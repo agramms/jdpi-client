@@ -29,6 +29,33 @@ jobs:
       run: bundle exec rake ci
       env:
         COVERAGE: true
+        CI: true
+
+    - name: Upload coverage reports
+      if: matrix.ruby-version == '3.2'
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+        retention-days: 30
+
+    - name: Comment coverage on PR
+      if: github.event_name == 'pull_request' && matrix.ruby-version == '3.2'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = 'coverage/.last_run.json';
+          if (fs.existsSync(path)) {
+            const coverage = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const percentage = coverage.result.line;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `📊 **Test Coverage**: ${percentage}%\n\n[View detailed coverage report](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`
+            });
+          }
 
   build:
     runs-on: ubuntu-latest

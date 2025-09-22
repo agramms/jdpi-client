@@ -99,4 +99,47 @@ class TestConfig < Minitest::Test
     refute @config.production?
     assert_equal "homl", @config.environment
   end
+
+  def test_empty_string_host_handling
+    @config.jdpi_client_host = ""
+    refute @config.production?
+    assert_equal "homl", @config.environment
+    assert_equal "http://", @config.base_url
+  end
+
+  def test_case_sensitive_production_detection
+    # Test lowercase variations work
+    @config.jdpi_client_host = "api.bank.prod.jdpi.pstijd"
+    assert @config.production?
+
+    @config.jdpi_client_host = "api.bank.production.jdpi.pstijd"
+    assert @config.production?
+
+    # Test uppercase variations don't work (case sensitive)
+    @config.jdpi_client_host = "API.BANK.PROD.JDPI.PSTIJD"
+    refute @config.production?
+  end
+
+  def test_base_url_format
+    # Test that base_url returns proper URL format
+    @config.jdpi_client_host = "api.test.com"
+    base_url = @config.base_url
+    assert base_url.match?(/^https?:\/\/.+/), "Base URL should be a valid URL format"
+  end
+
+  def test_config_attribute_assignment
+    # Test that all attributes can be assigned and retrieved
+    test_values = {
+      jdpi_client_host: "new.host.com",
+      oauth_client_id: "new_client",
+      oauth_secret: "new_secret",
+      timeout: 20,
+      open_timeout: 10
+    }
+
+    test_values.each do |attr, value|
+      @config.send("#{attr}=", value)
+      assert_equal value, @config.send(attr)
+    end
+  end
 end
