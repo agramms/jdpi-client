@@ -1,0 +1,52 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Development container overrides
+  jdpi-dev:
+    ports:
+      - "3000:3000"  # For any local development server
+      - "1234:1234"  # For Ruby debugger
+    environment:
+      - DEBUG=true
+      - VERBOSE=true
+      - LOG_LEVEL=debug
+    # Add development-specific commands
+    command: >
+      bash -c "
+        echo '🚀 Starting JDPI Client development environment...'
+        echo '📦 Installing dependencies...'
+        bundle install
+        echo '✅ Development environment ready!'
+        echo ''
+        echo 'Available commands:'
+        echo '  bundle exec rake test     - Run all tests'
+        echo '  bundle exec rubocop       - Check code style'
+        echo '  bundle exec rake          - Run tests + linting'
+        echo '  COVERAGE=true bundle exec rake test - Run with coverage'
+        echo ''
+        echo '🏃 You can now open VS Code and attach to this container!'
+        sleep infinity
+      "
+
+  # JDPI Mock Server development overrides
+  jdpi-mock:
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+    volumes:
+      - ./docker/services/jdpi-mock/logs:/app/logs
+
+  # Redis development settings
+  redis:
+    # Enable Redis logging for development
+    command: redis-server --loglevel verbose
+
+  # PostgreSQL development settings
+  postgres:
+    environment:
+      # Add development-specific environment variables
+      - POSTGRES_LOG_STATEMENT=all
+      - POSTGRES_LOG_MIN_DURATION_STATEMENT=0
