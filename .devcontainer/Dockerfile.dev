@@ -1,0 +1,94 @@
+# Development container for JDPI Client Ruby Gem
+# This container is designed for rich development experience with full service stack
+FROM ruby:3.2-slim
+
+# Avoid warnings by switching to noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Configure apt and install packages
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends apt-utils dialog 2>&1 \
+    # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
+    && apt-get -y install git openssh-client less iproute2 procps lsb-release \
+    # Install ruby development dependencies
+    && apt-get -y install build-essential libpq-dev libsqlite3-dev \
+    # Install additional development tools
+    && apt-get -y install curl wget vim nano \
+    # Install PostgreSQL client
+    && apt-get -y install postgresql-client \
+    # Install Node.js for any JavaScript-based tools
+    && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get -y install nodejs \
+    # Clean up
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch back to dialog for any ad-hoc use of apt-get
+ENV DEBIAN_FRONTEND=dialog
+
+# Create a non-root user to use if preferred - see https://aka.ms/vscode-remote/containers/non-root-user.
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Create the user
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    # Add sudo support for non-root user
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Set up Ruby environment
+ENV BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_BIN=/usr/local/bundle/bin \
+    GEM_HOME=/usr/local/bundle \
+    PATH=/usr/local/bundle/bin:$PATH
+
+# Create bundle directory and set permissions
+RUN mkdir -p /usr/local/bundle \
+    && chown -R $USERNAME:$USERNAME /usr/local/bundle
+
+# Install bundler and common development gems
+RUN gem update --system \
+    && gem install bundler \
+    && gem install solargraph \
+    && gem install rubocop \
+    && gem install debug \
+    && gem install pry \
+    && gem install pry-byebug \
+    && gem install yard
+
+# Set the default shell to bash rather than sh
+ENV SHELL /bin/bash
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Change ownership of workspace
+RUN chown -R $USERNAME:$USERNAME /workspace
+
+# Switch to non-root user
+USER $USERNAME
+
+# Set up development environment variables
+ENV RAILS_ENV=development \
+    RUBY_ENV=development \
+    COVERAGE=true \
+    DEV_CONTAINER=true \
+    DEVELOPMENT_MODE=true \
+    REDIS_URL=redis://redis:6379/0 \
+    DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_development \
+    DYNAMODB_ENDPOINT=http://dynamodb:8000 \
+    JDPI_CLIENT_HOST=jdpi-mock:3000
+
+# Install development dependencies when container starts
+# This will be handled by the setup script, but we prepare the environment
+RUN echo 'export PATH="/usr/local/bundle/bin:$PATH"' >> ~/.bashrc \
+    && echo 'export GEM_HOME="/usr/local/bundle"' >> ~/.bashrc \
+    && echo 'export BUNDLE_PATH="/usr/local/bundle"' >> ~/.bashrc
+
+# Default command
+CMD ["sleep", "infinity"]

@@ -1,0 +1,62 @@
+version: '3.8'
+
+# Testing overrides for docker-compose.yml
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.test.yml up
+
+services:
+  # Test runner container
+  jdpi-test:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.dev
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/15
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+      - TEST_ADAPTER=all
+      - CI=true
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    command: >
+      bash -c "
+        echo '🧪 Setting up test environment...'
+        bundle install
+        echo '🏃 Running test suite...'
+        bundle exec rake test
+        echo '✅ Tests completed!'
+      "
+    networks:
+      - jdpi-network
+
+  # Redis for testing (using different database)
+  redis:
+    # No overrides needed, using different database numbers
+
+  # PostgreSQL for testing
+  postgres:
+    environment:
+      # Optimized for testing
+      - POSTGRES_DB=jdpi_client_test
+      - POSTGRES_LOG_STATEMENT=none
+      - POSTGRES_LOG_MIN_DURATION_STATEMENT=-1
+
+  # DynamoDB optimized for testing
+  dynamodb:
+    # Use in-memory only for faster tests
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+
+  # JDPI Mock Server for testing
+  jdpi-mock:
+    environment:
+      - NODE_ENV=test
+      - LOG_LEVEL=error  # Reduce noise in tests

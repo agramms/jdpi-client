@@ -1,0 +1,241 @@
+version: '3.8'
+
+services:
+  # Main development container
+  jdpi-dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.dev
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache:/usr/local/bundle
+      - gem-cache:/usr/local/lib/ruby/gems
+    environment:
+      - RAILS_ENV=development
+      - RUBY_ENV=development
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_development
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+      - TEST_ADAPTER=all
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    command: sleep infinity
+    networks:
+      - jdpi-network
+
+  # Redis for token storage testing
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - jdpi-network
+
+  # PostgreSQL for database storage testing
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: jdpi_client_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - jdpi-network
+
+  # DynamoDB Local for AWS testing
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - jdpi-network
+
+  # JDPI Mock Server for API testing
+  jdpi-mock:
+    build:
+      context: ./docker/services/jdpi-mock
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - jdpi-network
+
+  # Ruby 3.0 container for matrix testing
+  ruby30:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile.ruby30
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache-30:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/1
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    profiles:
+      - matrix-test
+    networks:
+      - jdpi-network
+
+  # Ruby 3.1 container for matrix testing
+  ruby31:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile.ruby31
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache-31:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/2
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    profiles:
+      - matrix-test
+    networks:
+      - jdpi-network
+
+  # Ruby 3.2 container for matrix testing (same as dev, but test env)
+  ruby32:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile.ruby32
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache-32:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/3
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    profiles:
+      - matrix-test
+    networks:
+      - jdpi-network
+
+  # Ruby 3.3 container for matrix testing
+  ruby33:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile.ruby33
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache-33:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/4
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    profiles:
+      - matrix-test
+    networks:
+      - jdpi-network
+
+  # Ruby 3.4 container for matrix testing
+  ruby34:
+    build:
+      context: .
+      dockerfile: docker/ruby/Dockerfile.ruby34
+    volumes:
+      - .:/workspace:cached
+      - bundle-cache-34:/usr/local/bundle
+    environment:
+      - RAILS_ENV=test
+      - RUBY_ENV=test
+      - COVERAGE=true
+      - REDIS_URL=redis://redis:6379/5
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/jdpi_client_test
+      - DYNAMODB_ENDPOINT=http://dynamodb:8000
+      - JDPI_CLIENT_HOST=jdpi-mock:3000
+    depends_on:
+      - redis
+      - postgres
+      - dynamodb
+      - jdpi-mock
+    profiles:
+      - matrix-test
+    networks:
+      - jdpi-network
+
+volumes:
+  bundle-cache:
+  gem-cache:
+  bundle-cache-30:
+  bundle-cache-31:
+  bundle-cache-32:
+  bundle-cache-33:
+  bundle-cache-34:
+  redis-data:
+  postgres-data:
+
+networks:
+  jdpi-network:
+    driver: bridge

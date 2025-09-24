@@ -1,0 +1,123 @@
+{
+  "name": "JDPI Client Ruby Gem - Development Environment",
+  "dockerComposeFile": [
+    "../docker-compose.yml",
+    "../docker-compose.dev.yml"
+  ],
+  "service": "jdpi-dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "ruby.useLanguageServer": true,
+        "ruby.lint": {
+          "rubocop": {
+            "useBundler": true
+          }
+        },
+        "ruby.format": "rubocop",
+        "files.associations": {
+          "Gemfile": "ruby",
+          "Rakefile": "ruby",
+          "*.gemspec": "ruby"
+        },
+        "search.exclude": {
+          "**/coverage/**": true,
+          "**/vendor/**": true,
+          "**/.bundle/**": true
+        },
+        "files.watcherExclude": {
+          "**/coverage/**": true,
+          "**/vendor/**": true,
+          "**/.bundle/**": true
+        }
+      },
+
+      "extensions": [
+        "rebornix.ruby",
+        "castwide.solargraph",
+        "koichisasada.vscode-rdbg",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode-remote.remote-containers",
+        "github.copilot",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.test-adapter-converter",
+        "hbenl.vscode-test-explorer",
+        "ms-vscode.vscode-typescript-next",
+        "esbenp.prettier-vscode",
+        "ms-vscode.hexeditor"
+      ]
+    }
+  },
+
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  // Forward ports for development services
+  "forwardPorts": [
+    3000,  // JDPI Mock Server
+    6379,  // Redis
+    5432,  // PostgreSQL
+    8000,  // DynamoDB Local
+    9090,  // Prometheus (optional)
+    3001   // Grafana (optional)
+  ],
+
+  "portsAttributes": {
+    "3000": {
+      "label": "JDPI Mock Server",
+      "onAutoForward": "notify"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "8000": {
+      "label": "DynamoDB Local",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Set up environment variables for development
+  "containerEnv": {
+    "RAILS_ENV": "development",
+    "RUBY_ENV": "development",
+    "BUNDLE_PATH": "/usr/local/bundle",
+    "BUNDLE_BIN": "/usr/local/bundle/bin",
+    "GEM_HOME": "/usr/local/bundle",
+    "PATH": "/usr/local/bundle/bin:${PATH}",
+    "REDIS_URL": "redis://redis:6379/0",
+    "DATABASE_URL": "postgresql://postgres:password@postgres:5432/jdpi_client_development",
+    "DYNAMODB_ENDPOINT": "http://dynamodb:8000",
+    "JDPI_CLIENT_HOST": "jdpi-mock:3000",
+    "COVERAGE": "true",
+    "DEV_CONTAINER": "true",
+    "DEVELOPMENT_MODE": "true"
+  },
+
+  // Use 'postCreateCommand' to run commands after the container is created
+  "postCreateCommand": "scripts/setup-dev.sh",
+
+  // Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root
+  "remoteUser": "vscode",
+
+  // Mount options for better performance
+  "mounts": [
+    "source=${localWorkspaceFolder}/.bundle-cache,target=/usr/local/bundle,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/.gem-cache,target=/usr/local/lib/ruby/gems,type=bind,consistency=cached"
+  ]
+}

@@ -71,13 +71,80 @@ gem install jdpi_client-0.1.0.gem
 
 ### Docker Development Setup
 
-For a containerized development environment:
+**🐳 Complete containerized development environment with one-command setup!**
+
+We provide a comprehensive Docker development environment with:
+- All Ruby versions (3.0-3.4) for matrix testing
+- Complete storage backend testing (Redis, PostgreSQL, DynamoDB Local)
+- JDPI mock server for realistic API testing
+- VS Code devcontainer support
+- Hot reloading and debugging capabilities
+
+#### Quick Start (Recommended)
 
 ```bash
 git clone https://github.com/agramms/jdpi-client.git
 cd jdpi-client
-docker-compose up -d  # Starts Redis, PostgreSQL, and DynamoDB Local
-bundle install
+
+# Option 1: VS Code with Dev Container (Recommended)
+# 1. Open in VS Code
+# 2. Click "Reopen in Container" when prompted
+# 3. Environment will be automatically set up!
+
+# Option 2: Command Line Development
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker-compose exec jdpi-dev bash
+```
+
+#### Available Docker Commands
+
+```bash
+# Development environment
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# Run test suite
+docker-compose -f docker-compose.yml -f docker-compose.test.yml up jdpi-test
+
+# Matrix testing across all Ruby versions (3.0-3.4)
+./scripts/test-matrix.sh
+
+# Individual Ruby version testing
+docker-compose --profile matrix-test up ruby30  # Test Ruby 3.0
+docker-compose --profile matrix-test up ruby31  # Test Ruby 3.1
+# ... and so on for ruby32, ruby33, ruby34
+```
+
+#### Services Available
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| **jdpi-dev** | - | Main development container (Ruby 3.2) |
+| **redis** | 6379 | Token storage testing |
+| **postgres** | 5432 | Database storage testing |
+| **dynamodb** | 8000 | DynamoDB Local for AWS testing |
+| **jdpi-mock** | 3000 | Mock JDPI server for API testing |
+
+#### VS Code DevContainer Features
+
+- **Pre-configured environment** with Ruby LSP, debugger, and extensions
+- **Integrated testing** with test runner integration
+- **Port forwarding** for all services
+- **Hot reloading** for code changes
+- **Debugging support** with breakpoints and variable inspection
+
+#### Manual Setup
+
+If you prefer manual Docker setup:
+
+```bash
+# 1. Start all services
+docker-compose up -d
+
+# 2. Run setup script
+docker-compose exec jdpi-dev scripts/setup-dev.sh
+
+# 3. Verify setup
+docker-compose exec jdpi-dev bundle exec rake test
 ```
 
 ## 🚀 Quick Setup Checklist
