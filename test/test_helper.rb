@@ -18,7 +18,7 @@ module CIEnvironment
     # In CI, ensure no service URLs are set that could cause tests to fail or be unreliable
     service_vars = %w[REDIS_URL DATABASE_URL DYNAMODB_ENDPOINT JDPI_CLIENT_HOST]
     service_vars.each do |var|
-      if ENV[var] && !ENV[var].include?("localhost") && !ENV[var].include?("memory")
+      if ENV.fetch(var, nil) && !ENV.fetch(var).include?("localhost") && !ENV.fetch(var).include?("memory")
         ENV.delete(var)
         warn "[CI Safety] Removed #{var} to ensure clean test environment"
       end
@@ -34,7 +34,7 @@ module CIEnvironment
 
     puts "[CI] Running in CI environment with clean test setup:"
     puts "[CI] - TEST_ADAPTER: #{ENV['TEST_ADAPTER'] || 'not set (will default to memory)'}"
-    puts "[CI] - SKIP_INTEGRATION: #{ENV['SKIP_INTEGRATION']}"
+    puts "[CI] - SKIP_INTEGRATION: #{ENV.fetch('SKIP_INTEGRATION', nil)}"
     puts "[CI] - Service URLs cleaned for isolation"
   end
 end
